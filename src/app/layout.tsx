@@ -6,7 +6,7 @@ import { AudioPlayerProvider } from '@/context/AudioPlayerContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Meld Web — Stream, Import & Download Music',
+  title: 'Listeny — Stream, Import & Download Music',
   description:
     'A high-fidelity modern web client for streaming music, importing Spotify & YouTube playlists, and downloading offline tracks.',
 };

@@ -234,7 +234,7 @@ export function ImportModal({ isOpen, onClose, onPlaylistSaved }: ImportModalPro
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">Import Playlist</h2>
               <p className="text-xs text-zinc-400">
-                Bridge Spotify, YouTube, or a local CSV / M3U file into Meld
+                Bridge Spotify, YouTube, or a local CSV / M3U file into Listeny
               </p>
             </div>
           </div>
@@ -352,7 +352,7 @@ export function ImportModal({ isOpen, onClose, onPlaylistSaved }: ImportModalPro
                   {fileName ? 'File selected — click to replace' : 'Drop a CSV or M3U file here'}
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Compatible with Meld mobile exports —{' '}
+                  Compatible with Listeny mobile exports —{' '}
                   <span className="text-zinc-400">Title, Artist, Album, YouTube Video ID</span>
                   <br />
                   or any .m3u / .m3u8 playlist

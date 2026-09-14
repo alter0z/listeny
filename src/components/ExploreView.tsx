@@ -89,7 +89,7 @@ export function ExploreView({
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-4">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Meld Hybrid Engine</span>
+            <span>Listeny Hybrid Engine</span>
           </div>
 
           <h1 className="text-3xl lg:text-5xl font-black text-white tracking-tight leading-tight">

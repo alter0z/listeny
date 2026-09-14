@@ -523,7 +523,7 @@ export async function getLyricsData(videoId: string, title?: string, artist?: st
       const durParam = durationSec && durationSec > 0 ? `&duration=${Math.round(durationSec)}` : '';
 
       const res = await fetch(`https://lrclib.net/api/get?track_name=${cleanTitle}&artist_name=${cleanArtist}${durParam}`, {
-        headers: { 'User-Agent': 'MeldWeb/1.0 (https://github.com/FrancescoGrazioso/Meld)' },
+        headers: { 'User-Agent': 'Listeny/1.0 (https://github.com/alter0z/listeny)' },
       });
 
       if (res.ok) {

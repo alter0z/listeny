@@ -106,7 +106,7 @@ export function PlaylistDetailView({
             </h1>
 
             <p className="text-xs sm:text-sm text-zinc-400 mt-2">
-              {playlist.description || `Curated by ${playlist.author || 'Meld Web'}`}
+              {playlist.description || `Curated by ${playlist.author || 'Listeny'}`}
             </p>
 
             <div className="flex items-center gap-2 mt-3 text-xs text-zinc-400 font-medium justify-center sm:justify-start">

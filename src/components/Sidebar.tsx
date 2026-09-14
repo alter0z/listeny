@@ -46,10 +46,7 @@ export function Sidebar({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-black text-lg tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-                Meld
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Web
+                Listeny
               </span>
             </div>
             <p className="text-[11px] text-zinc-500 font-medium">Hybrid Music Engine</p>

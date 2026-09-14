@@ -2,13 +2,13 @@ import { get, set, del, keys, createStore } from 'idb-keyval';
 import type { Track, Playlist, LyricsData } from '@/types/music';
 
 // IndexedDB stores
-const audioStore = typeof window !== 'undefined' ? createStore('meld_audio_db', 'audio_blobs') : undefined;
-const metaStore = typeof window !== 'undefined' ? createStore('meld_meta_db', 'app_data') : undefined;
+const audioStore = typeof window !== 'undefined' ? createStore('listeny_audio_db', 'audio_blobs') : undefined;
+const metaStore = typeof window !== 'undefined' ? createStore('listeny_meta_db', 'app_data') : undefined;
 
-const PLAYLISTS_KEY = 'meld_saved_playlists';
-const FAVORITES_KEY = 'meld_favorite_tracks';
-const HISTORY_KEY = 'meld_play_history';
-const OFFLINE_INDEX_KEY = 'meld_offline_tracks_index';
+const PLAYLISTS_KEY = 'listeny_saved_playlists';
+const FAVORITES_KEY = 'listeny_favorite_tracks';
+const HISTORY_KEY = 'listeny_play_history';
+const OFFLINE_INDEX_KEY = 'listeny_offline_tracks_index';
 
 // ================= PLAYLISTS =================
 

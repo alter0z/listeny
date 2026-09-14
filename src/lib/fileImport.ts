@@ -2,7 +2,7 @@ import type { Track } from '@/types/music';
 
 /**
  * Parsers for importing playlists from local files:
- *  - CSV (RFC 4180 style), compatible with the Meld mobile export format:
+ *  - CSV (RFC 4180 style), compatible with the Listeny mobile export format:
  *    `Title,Artist,Album,YouTube Video ID`
  *  - M3U / M3U8 playlist files (`#EXTINF:<duration>,<Artist - Title>` + URL lines)
  */
@@ -204,7 +204,7 @@ interface CsvColumnMap {
 }
 
 /**
- * Detects column semantics from a CSV header row (Meld mobile export:
+ * Detects column semantics from a CSV header row (Listeny mobile export:
  * `Title,Artist,Album,YouTube Video ID`). Falls back to positional
  * [title, artist, album, id] when headers are unrecognizable.
  */
@@ -257,7 +257,7 @@ function findIdColumnByContent(rows: string[][]): number | null {
   return bestCount >= Math.max(1, Math.floor(sampleRows.length / 2)) ? bestIdx : null;
 }
 
-/** Parses CSV playlists exported by Meld mobile or similar tools. */
+/** Parses CSV playlists exported by Listeny mobile or similar tools. */
 export function parseCsvRows(rows: string[][]): { rows: ImportRow[]; skipped: number } {
   if (rows.length === 0) return { rows: [], skipped: 0 };
 

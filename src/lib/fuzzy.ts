@@ -1,5 +1,5 @@
 /**
- * Port of SpotifyMapper.kt fuzzy matching & normalization logic from Meld Android.
+ * Port of SpotifyMapper.kt fuzzy matching & normalization logic from Listeny Android.
  * Uses Dice's Coefficient (Bigram similarity) + Duration proximity + Artist overlap.
  */
 

@@ -241,7 +241,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.artist,
-      album: currentTrack.album || 'Meld Music',
+      album: currentTrack.album || 'Listeny',
       artwork: [
         { src: currentTrack.thumbnail, sizes: '96x96', type: 'image/jpeg' },
         { src: currentTrack.thumbnail, sizes: '128x128', type: 'image/jpeg' },
