@@ -30,8 +30,7 @@ export async function HEAD(
   try {
     const { url, mimeType, contentLength } = await resolveAudioStreamUrl(id);
     const headers = new Headers(CORS_HEADERS);
-    // Normalize video/mp4 → audio/mp4 for <audio> element compatibility
-    const effectiveMime = (mimeType || 'audio/mp4').replace('video/', 'audio/');
+    const effectiveMime = mimeType || 'video/mp4';
     headers.set('Content-Type', effectiveMime);
     headers.set('Accept-Ranges', 'bytes');
     if (contentLength) {
@@ -81,12 +80,8 @@ export async function GET(
     }
 
     const responseHeaders = new Headers(CORS_HEADERS);
-    // Serve as audio/mp4 even for muxed video/mp4 since the <audio> element will
-    // only decode the audio track and it avoids any user-agent Content-Type confusion.
-    const upstreamContentType = upstreamResponse.headers.get('content-type') || 'audio/mp4';
-    const effectiveMime = (mimeType || upstreamContentType).includes('video/')
-      ? upstreamContentType.replace('video/', 'audio/')
-      : (mimeType || upstreamContentType);
+    const upstreamContentType = upstreamResponse.headers.get('content-type');
+    const effectiveMime = mimeType || upstreamContentType || 'video/mp4';
     responseHeaders.set('Content-Type', effectiveMime);
     responseHeaders.set('Accept-Ranges', 'bytes');
     responseHeaders.set('Cache-Control', 'public, max-age=7200');

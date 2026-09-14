@@ -88,7 +88,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [isVisualizerActive, setIsVisualizerActive] = useState(false);
 
   // Audio and Web Audio API refs
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLMediaElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
@@ -100,13 +100,18 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const handleNextTrackRef = useRef<() => void>(() => {});
 
-  // Initialize HTML5 Audio element once on mount
+  // Initialize HTML5 Media element once on mount.
+  // We use HTMLVideoElement (document.createElement('video')) instead of new Audio()
+  // because YouTube streams are muxed MP4s (H.264 + AAC) or WebM. Chromium's audio-only
+  // pipeline throws PipelineStatus::DECODER_ERROR_NOT_SUPPORTED on muxed containers
+  // when loaded via HTMLAudioElement due to lack of a video sink configuration.
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const audio = new Audio();
+    const audio = document.createElement('video');
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
+    audio.playsInline = true;
     audio.volume = 0.85;
     audioRef.current = audio;
 
