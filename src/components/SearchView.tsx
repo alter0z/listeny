@@ -196,7 +196,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
 
                   return (
                     <div
-                      key={track.id}
+                      key={`${track.id}-${idx}`}
                       className={`group flex items-center justify-between p-2.5 rounded-2xl hover:bg-[#14141c] transition-colors border border-transparent hover:border-white/5 ${
                         isCurrent ? 'bg-emerald-500/10 border-emerald-500/20' : ''
                       }`}

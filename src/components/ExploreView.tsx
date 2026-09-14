@@ -168,11 +168,11 @@ export function ExploreView({
           {/* If section contains tracks */}
           {section.tracks && section.tracks.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {section.tracks.slice(0, 10).map((track) => {
+              {section.tracks.slice(0, 10).map((track, idx) => {
                 const isCurrent = currentTrack?.id === track.id;
                 return (
                   <div
-                    key={track.id}
+                    key={`${track.id}-${idx}`}
                     className="group bg-[#121217] hover:bg-[#181822] border border-[#1e1e28] hover:border-emerald-500/30 rounded-2xl p-3.5 transition-all duration-200 cursor-pointer shadow-md"
                   >
                     <div

@@ -67,58 +67,59 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#070709] text-white">
-      {/* Sidebar Navigation */}
-      <Sidebar
-        currentView={currentView === 'library' && libraryTab === 'downloads' ? 'downloads' : currentView}
-        setCurrentView={handleViewChange}
-        playlists={playlists}
-        onSelectPlaylist={handleSelectPlaylist}
-        onOpenImport={() => setIsImportModalOpen(true)}
-        offlineCount={offlineCount}
-      />
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#070709] text-white select-none">
+      {/* Top Workspace: Sidebar + Main Views + Queue Drawer */}
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        <Sidebar
+          currentView={currentView === 'library' && libraryTab === 'downloads' ? 'downloads' : currentView}
+          setCurrentView={handleViewChange}
+          playlists={playlists}
+          onSelectPlaylist={handleSelectPlaylist}
+          onOpenImport={() => setIsImportModalOpen(true)}
+          offlineCount={offlineCount}
+        />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0a0a0f] relative">
-        {currentView === 'explore' && (
-          <ExploreView
-            onSelectPlaylist={handleSelectPlaylist}
-            onSearchGenre={handleSearchGenre}
-            onOpenImport={() => setIsImportModalOpen(true)}
-          />
-        )}
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0a0a0f] relative">
+          {currentView === 'explore' && (
+            <ExploreView
+              onSelectPlaylist={handleSelectPlaylist}
+              onSearchGenre={handleSearchGenre}
+              onOpenImport={() => setIsImportModalOpen(true)}
+            />
+          )}
 
-        {currentView === 'search' && (
-          <SearchView
-            initialQuery={searchQuery}
-            onSelectPlaylist={handleSelectPlaylist}
-          />
-        )}
+          {currentView === 'search' && (
+            <SearchView
+              initialQuery={searchQuery}
+              onSelectPlaylist={handleSelectPlaylist}
+            />
+          )}
 
-        {currentView === 'library' && (
-          <LibraryView
-            initialTab={libraryTab}
-            onSelectPlaylist={handleSelectPlaylist}
-            onOpenImport={() => setIsImportModalOpen(true)}
-          />
-        )}
+          {currentView === 'library' && (
+            <LibraryView
+              initialTab={libraryTab}
+              onSelectPlaylist={handleSelectPlaylist}
+              onOpenImport={() => setIsImportModalOpen(true)}
+            />
+          )}
 
-        {currentView === 'playlist_detail' && selectedPlaylist && (
-          <PlaylistDetailView
-            playlist={selectedPlaylist}
-            onBack={() => setCurrentView('explore')}
-            onPlaylistUpdated={refreshSidebarData}
-          />
-        )}
-      </main>
+          {currentView === 'playlist_detail' && selectedPlaylist && (
+            <PlaylistDetailView
+              playlist={selectedPlaylist}
+              onBack={() => setCurrentView('explore')}
+              onPlaylistUpdated={refreshSidebarData}
+            />
+          )}
+        </main>
 
-      {/* Slide-over Queue Drawer */}
-      <QueueDrawer />
+        <QueueDrawer />
+      </div>
 
-      {/* Fullscreen Player Modal with Synced Lyrics */}
+      {/* Bottom Full-Width Spotify-Style Player */}
+      <PlayerBar />
+
+      {/* Overlays / Modals */}
       <FullscreenPlayer />
-
-      {/* 1-Click Spotify & YouTube Playlist Import Modal */}
       <ImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
@@ -128,9 +129,6 @@ export default function Home() {
           setLibraryTab('playlists');
         }}
       />
-
-      {/* Bottom Audio Player Bar */}
-      <PlayerBar />
     </div>
   );
 }

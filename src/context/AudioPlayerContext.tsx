@@ -92,6 +92,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
   const frequencyDataRef = useRef<Uint8Array | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
@@ -200,20 +201,25 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       analyser.fftSize = 128;
       analyser.smoothingTimeConstant = 0.8;
 
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = isMuted ? 0 : volume;
+
       if (!sourceNodeRef.current) {
         const source = ctx.createMediaElementSource(audioRef.current);
         source.connect(analyser);
-        analyser.connect(ctx.destination);
+        analyser.connect(gainNode);
+        gainNode.connect(ctx.destination);
         sourceNodeRef.current = source;
       }
 
       audioContextRef.current = ctx;
       analyserRef.current = analyser;
+      gainNodeRef.current = gainNode;
       frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
     } catch (err) {
       console.warn('Web Audio API context could not be initialized:', err);
     }
-  }, []);
+  }, [isMuted, volume]);
 
   const getFrequencyData = useCallback((): Uint8Array | null => {
     if (!analyserRef.current || !frequencyDataRef.current) return null;
@@ -452,10 +458,14 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     setVolumeState(clamped);
     if (audioRef.current) {
       audioRef.current.volume = clamped;
-      if (clamped > 0 && isMuted) {
-        setIsMuted(false);
-        audioRef.current.muted = false;
-      }
+    }
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = clamped;
+    }
+    if (clamped > 0 && isMuted) {
+      setIsMuted(false);
+      if (audioRef.current) audioRef.current.muted = false;
+      if (gainNodeRef.current) gainNodeRef.current.gain.value = clamped;
     }
   }, [isMuted]);
 
@@ -464,7 +474,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const newMute = !isMuted;
     setIsMuted(newMute);
     audioRef.current.muted = newMute;
-  }, [isMuted]);
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = newMute ? 0 : volume;
+    }
+  }, [isMuted, volume]);
 
   const toggleShuffle = useCallback(() => {
     setIsShuffle((prev) => !prev);

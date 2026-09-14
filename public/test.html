@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <audio id="player" controls crossorigin="anonymous"></audio>
+  <button id="playBtn">Play u1CRhcHXJWA</button>
+  <button id="playBtn2">Play u1CRhcHXJWA (No CrossOrigin)</button>
+  <pre id="log"></pre>
+  <script>
+    function log(msg) { document.getElementById('log').textContent += msg + '\n'; }
+    document.getElementById('playBtn').addEventListener('click', async () => {
+      const audio = document.getElementById('player');
+      audio.crossOrigin = 'anonymous';
+      audio.src = '/api/stream/u1CRhcHXJWA';
+      audio.onloadeddata = () => log('Loaded data');
+      audio.onerror = (e) => {
+        log('Error: code=' + audio.error.code + ' message=' + audio.error.message);
+      };
+      try {
+        await audio.play();
+        log('Playing successfully!');
+      } catch (err) {
+        log('Play exception: ' + err.message);
+      }
+    });
+
+    document.getElementById('playBtn2').addEventListener('click', async () => {
+      const audio = document.getElementById('player');
+      audio.removeAttribute('crossorigin');
+      audio.src = '/api/stream/u1CRhcHXJWA';
+      audio.onloadeddata = () => log('Loaded data 2');
+      audio.onerror = (e) => {
+        log('Error 2: code=' + audio.error.code + ' message=' + audio.error.message);
+      };
+      try {
+        await audio.play();
+        log('Playing successfully 2!');
+      } catch (err) {
+        log('Play exception 2: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

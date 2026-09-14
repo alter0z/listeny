@@ -449,7 +449,7 @@ export function ImportModal({ isOpen, onClose, onPlaylistSaved }: ImportModalPro
             <div className="space-y-1 max-h-48 overflow-y-auto pr-2">
               {importedPlaylist.tracks.map((track, idx) => (
                 <div
-                  key={track.id || idx}
+                  key={`${track.id}-${idx}`}
                   className="flex items-center gap-3 px-3 py-2 rounded-xl bg-[#14141c] hover:bg-[#1a1a24] text-xs transition-colors"
                 >
                   <span className="w-5 text-center text-zinc-500 font-mono text-[11px]">
