@@ -14,10 +14,10 @@ export async function GET(
   try {
     const album = await getAlbumDetails(id);
     return NextResponse.json(album);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Album details error for ${id}:`, error);
     return NextResponse.json(
-      { error: 'Failed to fetch album', message: error?.message || String(error) },
+      { error: 'Failed to fetch album', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

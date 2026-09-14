@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import type { Track, LyricsData, SyncedLyricLine } from '@/types/music';
+import type { Track, LyricsData } from '@/types/music';
 import {
   addToHistory,
   getOfflineAudioUrl,
@@ -95,13 +95,19 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const frequencyDataRef = useRef<Uint8Array | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
-  // Initialize HTML5 Audio element
+  const repeatModeRef = useRef<RepeatMode>(repeatMode);
+  repeatModeRef.current = repeatMode;
+
+  const handleNextTrackRef = useRef<() => void>(() => {});
+
+  // Initialize HTML5 Audio element once on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const audio = new Audio();
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
+    audio.volume = 0.85;
     audioRef.current = audio;
 
     const onTimeUpdate = () => {
@@ -123,17 +129,22 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     };
 
     const onEnded = () => {
-      // Handle repeat mode 'one'
-      if (repeatMode === 'one') {
+      if (repeatModeRef.current === 'one') {
         audio.currentTime = 0;
         audio.play().catch(console.error);
       } else {
-        handleNextTrack();
+        handleNextTrackRef.current();
       }
     };
 
     const onError = (e: any) => {
-      console.error('Audio playback error:', e);
+      const mediaErr = audio.error;
+      console.error('Audio playback error details:', {
+        event: e,
+        code: mediaErr?.code,
+        message: mediaErr?.message,
+        src: audio.src,
+      });
       setIsLoading(false);
       setIsPlaying(false);
     };
@@ -162,32 +173,37 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         URL.revokeObjectURL(blobUrlRef.current);
       }
     };
-  }, [repeatMode]);
+  }, []);
 
-  // Connect Web Audio API Analyser
+  // Connect Web Audio API Analyser safely
   const initAudioContext = useCallback(() => {
     if (typeof window === 'undefined' || !audioRef.current) return;
+
     if (audioContextRef.current) {
       if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
+        audioContextRef.current.resume().catch(() => {});
       }
       return;
     }
 
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+
       const ctx = new AudioCtx();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
       analyser.smoothingTimeConstant = 0.8;
 
-      const source = ctx.createMediaElementSource(audioRef.current);
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
+      if (!sourceNodeRef.current) {
+        const source = ctx.createMediaElementSource(audioRef.current);
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        sourceNodeRef.current = source;
+      }
 
       audioContextRef.current = ctx;
       analyserRef.current = analyser;
-      sourceNodeRef.current = source;
       frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
     } catch (err) {
       console.warn('Web Audio API context could not be initialized:', err);
@@ -330,7 +346,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     audioRef.current.src = audioSrc;
-    audioRef.current.load();
 
     try {
       await audioRef.current.play();
@@ -340,6 +355,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (err.name !== 'AbortError') {
         console.error('Play error:', err);
       }
+      setIsPlaying(false);
     } finally {
       setIsLoading(false);
     }
@@ -383,13 +399,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (nextIndex < queue.length) {
       setQueueIndex(nextIndex);
       playTrack(queue[nextIndex]);
-    } else if (repeatMode === 'all') {
+    } else if (repeatModeRef.current === 'all') {
       setQueueIndex(0);
       playTrack(queue[0]);
     } else {
       setIsPlaying(false);
     }
-  }, [queue, queueIndex, isShuffle, repeatMode, playTrack]);
+  }, [queue, queueIndex, isShuffle, playTrack]);
+
+  handleNextTrackRef.current = handleNextTrack;
 
   const next = useCallback(() => {
     handleNextTrack();

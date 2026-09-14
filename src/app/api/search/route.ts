@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
   try {
     const results = await searchMusic(query.trim(), type || undefined);
     return NextResponse.json(results);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Search API error:', error);
     return NextResponse.json(
-      { error: 'Failed to search music', message: error?.message || String(error) },
+      { error: 'Failed to search music', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

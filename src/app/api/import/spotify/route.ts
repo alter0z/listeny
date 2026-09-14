@@ -69,10 +69,10 @@ export async function POST(request: NextRequest) {
       totalSpotifyTracks: entity.tracks.length,
       mappedCount: mappedTracks.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Spotify import error:', error);
     return NextResponse.json(
-      { error: 'Failed to import Spotify playlist', message: error?.message || String(error) },
+      { error: 'Failed to import Spotify playlist', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

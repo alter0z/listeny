@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
       enriched: Object.keys(durations).length,
       requested: videoIds.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('File import enrichment error:', error);
     return NextResponse.json(
-      { error: 'Failed to enrich track durations', message: error?.message || String(error) },
+      { error: 'Failed to enrich track durations', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

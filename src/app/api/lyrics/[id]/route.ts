@@ -18,10 +18,10 @@ export async function GET(
   try {
     const lyrics = await getLyricsData(id, title, artist, duration);
     return NextResponse.json(lyrics);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Lyrics error for track ${id}:`, error);
     return NextResponse.json(
-      { error: 'Failed to fetch lyrics', message: error?.message || String(error) },
+      { error: 'Failed to fetch lyrics', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

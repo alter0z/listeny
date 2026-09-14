@@ -39,7 +39,9 @@ export async function GET(
     const filename = `${sanitizeFilename(baseName)}.${ext}`;
 
     const headers = new Headers();
-    headers.set('Content-Type', mimeType || 'audio/mp4');
+    // Always serve downloads with audio/* mime type even if the upstream format is muxed video
+    const downloadMime = mimeType.replace('video/', 'audio/');
+    headers.set('Content-Type', downloadMime);
     headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
 
     const contentLength = upstreamResponse.headers.get('content-length');
@@ -47,14 +49,14 @@ export async function GET(
       headers.set('Content-Length', contentLength);
     }
 
-    return new NextResponse(upstreamResponse.body as any, {
+    return new NextResponse(upstreamResponse.body, {
       status: 200,
       headers,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Download error for ID ${id}:`, error);
     return NextResponse.json(
-      { error: 'Failed to download track', message: error?.message || String(error) },
+      { error: 'Failed to download track', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

@@ -1,6 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveAudioStreamUrl } from '@/lib/innertube';
 
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+  'Access-Control-Allow-Headers': 'Range, Content-Type, Authorization',
+  'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      ...CORS_HEADERS,
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
+export async function HEAD(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  if (!id) {
+    return NextResponse.json({ error: 'Video ID is required' }, { status: 400, headers: CORS_HEADERS });
+  }
+
+  try {
+    const { url, mimeType, contentLength } = await resolveAudioStreamUrl(id);
+    const headers = new Headers(CORS_HEADERS);
+    // Normalize video/mp4 → audio/mp4 for <audio> element compatibility
+    const effectiveMime = (mimeType || 'audio/mp4').replace('video/', 'audio/');
+    headers.set('Content-Type', effectiveMime);
+    headers.set('Accept-Ranges', 'bytes');
+    if (contentLength) {
+      headers.set('Content-Length', String(contentLength));
+    }
+    return new NextResponse(null, { status: 200, headers });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: 'Failed to resolve stream metadata' },
+      { status: 500, headers: CORS_HEADERS }
+    );
+  }
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -8,36 +53,45 @@ export async function GET(
   const { id } = await context.params;
 
   if (!id) {
-    return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Video ID is required' },
+      { status: 400, headers: CORS_HEADERS }
+    );
   }
 
   try {
-    const { url, mimeType } = await resolveAudioStreamUrl(id);
+    const { url, mimeType, contentLength: resolvedContentLength } = await resolveAudioStreamUrl(id);
 
     const rangeHeader = request.headers.get('range');
-    const headers: Record<string, string> = {
+    const upstreamHeaders: Record<string, string> = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     };
 
     if (rangeHeader) {
-      headers['Range'] = rangeHeader;
+      upstreamHeaders['Range'] = rangeHeader;
     }
 
-    const upstreamResponse = await fetch(url, { headers });
+    const upstreamResponse = await fetch(url, { headers: upstreamHeaders });
 
     if (!upstreamResponse.ok && upstreamResponse.status !== 206) {
       return NextResponse.json(
         { error: 'Upstream stream error', status: upstreamResponse.status },
-        { status: upstreamResponse.status }
+        { status: upstreamResponse.status, headers: CORS_HEADERS }
       );
     }
 
-    const responseHeaders = new Headers();
-    responseHeaders.set('Content-Type', mimeType || upstreamResponse.headers.get('content-type') || 'audio/mp4');
+    const responseHeaders = new Headers(CORS_HEADERS);
+    // Serve as audio/mp4 even for muxed video/mp4 since the <audio> element will
+    // only decode the audio track and it avoids any user-agent Content-Type confusion.
+    const upstreamContentType = upstreamResponse.headers.get('content-type') || 'audio/mp4';
+    const effectiveMime = (mimeType || upstreamContentType).includes('video/')
+      ? upstreamContentType.replace('video/', 'audio/')
+      : (mimeType || upstreamContentType);
+    responseHeaders.set('Content-Type', effectiveMime);
     responseHeaders.set('Accept-Ranges', 'bytes');
     responseHeaders.set('Cache-Control', 'public, max-age=7200');
 
-    const contentLength = upstreamResponse.headers.get('content-length');
+    const contentLength = upstreamResponse.headers.get('content-length') || (resolvedContentLength ? String(resolvedContentLength) : null);
     if (contentLength) {
       responseHeaders.set('Content-Length', contentLength);
     }
@@ -47,15 +101,16 @@ export async function GET(
       responseHeaders.set('Content-Range', contentRange);
     }
 
-    return new NextResponse(upstreamResponse.body as any, {
+    return new NextResponse(upstreamResponse.body, {
       status: upstreamResponse.status === 206 ? 206 : 200,
       headers: responseHeaders,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Stream resolution error for ID ${id}:`, error);
+    const err = error as Error;
     return NextResponse.json(
-      { error: 'Failed to resolve stream', message: error?.message || String(error) },
-      { status: 500 }
+      { error: 'Failed to resolve stream', message: err?.message || String(error) },
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }

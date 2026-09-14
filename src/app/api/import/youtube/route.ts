@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
       success: true,
       playlist: savedPlaylist,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('YouTube import error:', error);
     return NextResponse.json(
-      { error: 'Failed to import YouTube playlist', message: error?.message || String(error) },
+      { error: 'Failed to import YouTube playlist', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

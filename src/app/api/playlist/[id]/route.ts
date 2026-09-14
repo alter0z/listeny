@@ -14,10 +14,10 @@ export async function GET(
   try {
     const playlist = await getPlaylistDetails(id);
     return NextResponse.json(playlist);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Playlist details error for ${id}:`, error);
     return NextResponse.json(
-      { error: 'Failed to fetch playlist', message: error?.message || String(error) },
+      { error: 'Failed to fetch playlist', message: (error as Error)?.message || String(error) },
       { status: 500 }
     );
   }

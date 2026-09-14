@@ -1,5 +1,5 @@
 import vm from 'node:vm';
-import { Innertube, UniversalCache, Platform } from 'youtubei.js';
+import { Innertube, UniversalCache, Platform, ClientType } from 'youtubei.js';
 import type { Track, Album, Artist, Playlist, HomeData, HomeSection } from '@/types/music';
 
 // Initialize the Platform evaluator using Node.js VM
@@ -17,6 +17,9 @@ Platform.shim.eval = async (data: any, env: any = {}) => {
 let innertubeInstance: Innertube | null = null;
 let initPromise: Promise<Innertube> | null = null;
 
+let iosInnertubeInstance: Innertube | null = null;
+let iosInitPromise: Promise<Innertube> | null = null;
+
 export async function getInnertube(): Promise<Innertube> {
   if (innertubeInstance) return innertubeInstance;
   if (initPromise) return initPromise;
@@ -30,13 +33,36 @@ export async function getInnertube(): Promise<Innertube> {
       innertubeInstance = yt;
       return yt;
     } catch (err) {
-      console.error('Failed to initialize Innertube:', err);
+      console.error('Failed to initialize Innertube (default):', err);
       initPromise = null;
       throw err;
     }
   })();
 
   return initPromise;
+}
+
+export async function getInnertubeIos(): Promise<Innertube> {
+  if (iosInnertubeInstance) return iosInnertubeInstance;
+  if (iosInitPromise) return iosInitPromise;
+
+  iosInitPromise = (async () => {
+    try {
+      const yt = await Innertube.create({
+        cache: new UniversalCache(false),
+        generate_session_locally: true,
+        client_type: ClientType.IOS,
+      });
+      iosInnertubeInstance = yt;
+      return yt;
+    } catch (err) {
+      console.error('Failed to initialize Innertube (IOS):', err);
+      iosInitPromise = null;
+      throw err;
+    }
+  })();
+
+  return iosInitPromise;
 }
 
 export function formatDuration(seconds: number): string {
@@ -198,18 +224,81 @@ function parseSearchItem(
 
 /**
  * Resolves an audio stream URL for a given YouTube video ID.
+ * Prefers muxed (video+audio, itag 18) formats because YouTube's CDN allows full
+ * unthrottled downloads and range requests for muxed formats, whereas adaptive audio-only
+ * formats often return 403 Forbidden on the web remix client.
  */
 export async function resolveAudioStreamUrl(videoId: string): Promise<{ url: string; mimeType: string; contentLength?: number }> {
-  const yt = await getInnertube();
+  // Strategy 1: YouTube Music getInfo - try muxed video+audio format first (itag 18)
+  try {
+    const yt = await getInnertube();
+    const info = await yt.music.getInfo(videoId);
 
-  const info = await yt.music.getInfo(videoId);
-  const audioFormat = info.chooseFormat({ type: 'audio', quality: 'best' });
+    // Prefer muxed format (itag 18 / 360p video+audio) which supports full range requests without 403
+    let format = info.chooseFormat({ type: 'video+audio', quality: 'best' });
+
+    // If not found via chooseFormat, check formats list explicitly
+    if (!format && info.streaming_data?.formats) {
+      format = info.streaming_data.formats.find((f: any) => f.itag === 18) || info.streaming_data.formats[0];
+    }
+
+    // Fall back to audio-only if muxed isn't present
+    if (!format) {
+      format = info.chooseFormat({ type: 'audio', quality: 'best' });
+    }
+
+    if (format) {
+      const decipheredUrl = format.url || await format.decipher(yt.session.player);
+      if (decipheredUrl && typeof decipheredUrl === 'string') {
+        return {
+          url: decipheredUrl,
+          mimeType: format.mime_type || 'audio/mp4',
+          contentLength: format.content_length,
+        };
+      }
+    }
+  } catch (err) {
+    // console.warn(`YT Music resolution failed for ${videoId}, falling back...`);
+  }
+
+  // Strategy 2: iOS client getBasicInfo (Best for standard videos avoiding cypher issues)
+  try {
+    const ytIos = await getInnertubeIos();
+    const info = await ytIos.getBasicInfo(videoId);
+
+    // Try muxed format first, then audio
+    let format = info.chooseFormat({ type: 'video+audio', quality: 'best' });
+    if (!format) {
+      format = info.chooseFormat({ type: 'audio', quality: 'best' });
+    }
+
+    if (format) {
+      const decipheredUrl = format.url || await format.decipher(ytIos.session.player);
+      if (decipheredUrl && typeof decipheredUrl === 'string') {
+        return {
+          url: decipheredUrl,
+          mimeType: format.mime_type || 'audio/mp4',
+          contentLength: format.content_length,
+        };
+      }
+    }
+  } catch (err) {
+    // console.warn(`iOS client fallback failed for ${videoId}, trying default info...`);
+  }
+
+  // Strategy 3: Default client getBasicInfo (Last resort fallback)
+  const yt = await getInnertube();
+  const info = await yt.getBasicInfo(videoId);
+  let audioFormat = info.chooseFormat({ type: 'video+audio', quality: 'best' });
+  if (!audioFormat) {
+    audioFormat = info.chooseFormat({ type: 'audio', quality: 'best' });
+  }
 
   if (!audioFormat) {
     throw new Error(`No suitable audio format found for video ${videoId}`);
   }
 
-  const decipheredUrl = await audioFormat.decipher(yt.session.player);
+  const decipheredUrl = audioFormat.url || await audioFormat.decipher(yt.session.player);
   if (!decipheredUrl || typeof decipheredUrl !== 'string') {
     throw new Error(`Failed to decipher stream URL for video ${videoId}`);
   }
