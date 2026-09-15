@@ -334,14 +334,17 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const idx = newQueue.findIndex((t) => t.id === track.id);
       setQueueIndex(idx >= 0 ? idx : 0);
     } else {
-      setQueue((prevQueue) => {
-        const exists = prevQueue.some((t) => t.id === track.id);
-        if (!exists) {
-          return [track, ...prevQueue];
-        }
-        return prevQueue;
-      });
-      setQueueIndex(0);
+      // When no newQueue provided, find track in current queue
+      const existingIndex = queue.findIndex((t) => t.id === track.id);
+
+      if (existingIndex >= 0) {
+        // Track exists in queue - just update the index to point to it
+        setQueueIndex(existingIndex);
+      } else {
+        // Track not in queue - add it at the front
+        setQueue((prevQueue) => [track, ...prevQueue]);
+        setQueueIndex(0);
+      }
     }
 
     // Check offline cache first
@@ -402,17 +405,17 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (isShuffle) {
       const randomIndex = Math.floor(Math.random() * queue.length);
       setQueueIndex(randomIndex);
-      playTrack(queue[randomIndex]);
+      playTrack(queue[randomIndex], queue);
       return;
     }
 
     const nextIndex = queueIndex + 1;
     if (nextIndex < queue.length) {
       setQueueIndex(nextIndex);
-      playTrack(queue[nextIndex]);
+      playTrack(queue[nextIndex], queue);
     } else if (repeatModeRef.current === 'all') {
       setQueueIndex(0);
-      playTrack(queue[0]);
+      playTrack(queue[0], queue);
     } else {
       setIsPlaying(false);
     }
@@ -438,11 +441,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const prevIndex = queueIndex - 1;
     if (prevIndex >= 0) {
       setQueueIndex(prevIndex);
-      playTrack(queue[prevIndex]);
+      playTrack(queue[prevIndex], queue);
     } else {
       // Loop back to last item
       setQueueIndex(queue.length - 1);
-      playTrack(queue[queue.length - 1]);
+      playTrack(queue[queue.length - 1], queue);
     }
   }, [queue, queueIndex, playTrack]);
 
@@ -497,13 +500,30 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const removeFromQueue = useCallback((index: number) => {
-    setQueue((prev) => prev.filter((_, i) => i !== index));
-    setQueueIndex((prevIndex) => {
-      if (index < prevIndex) return prevIndex - 1;
-      if (index === prevIndex && prevIndex >= queue.length - 1) return Math.max(0, queue.length - 2);
-      return prevIndex;
+    setQueue((prev) => {
+      const newQueue = prev.filter((_, i) => i !== index);
+
+      // Update queueIndex based on the new queue
+      setQueueIndex((prevIndex) => {
+        if (index < prevIndex) {
+          // Removed track before current - shift index down
+          return prevIndex - 1;
+        } else if (index === prevIndex) {
+          // Removed currently playing track
+          if (prevIndex >= newQueue.length) {
+            // Was last track, wrap to 0 or stay at max valid index
+            return Math.max(0, newQueue.length - 1);
+          }
+          // Stay at same index (next track slides into this position)
+          return prevIndex;
+        }
+        // Removed track after current - no change needed
+        return prevIndex;
+      });
+
+      return newQueue;
     });
-  }, [queue.length]);
+  }, []);
 
   const clearQueue = useCallback(() => {
     setQueue(currentTrack ? [currentTrack] : []);
