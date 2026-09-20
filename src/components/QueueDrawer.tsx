@@ -88,14 +88,14 @@ export function QueueDrawer() {
           Next in Queue
         </span>
 
-        {queue.length <= 1 ? (
+        {queue.length <= 1 || queueIndex >= queue.length - 1 ? (
           <div className="text-center py-12 px-4 text-xs text-zinc-500">
             Queue is empty. Add songs from search or explore to queue up next tracks.
           </div>
         ) : (
           queue.map((track, idx) => {
-            const isCurrent = currentTrack?.id === track.id;
-            if (isCurrent) return null; // Already shown in Now Playing
+            // Only show tracks after the current index
+            if (idx <= queueIndex) return null;
 
             return (
               <div

@@ -1,5 +1,5 @@
 import { get, set, del, keys, createStore } from 'idb-keyval';
-import type { Track, Playlist, LyricsData } from '@/types/music';
+import type { Track, Playlist, LyricsData, PlayerSessionState } from '@/types/music';
 
 // IndexedDB stores
 const audioStore = typeof window !== 'undefined' ? createStore('listeny_audio_db', 'audio_blobs') : undefined;
@@ -9,6 +9,7 @@ const PLAYLISTS_KEY = 'listeny_saved_playlists';
 const FAVORITES_KEY = 'listeny_favorite_tracks';
 const HISTORY_KEY = 'listeny_play_history';
 const OFFLINE_INDEX_KEY = 'listeny_offline_tracks_index';
+const PLAYER_STATE_KEY = 'listeny_player_session_state';
 
 // ================= PLAYLISTS =================
 
@@ -215,3 +216,28 @@ export async function cacheLyrics(trackId: string, lyrics: LyricsData): Promise<
     console.error('Failed to cache lyrics:', e);
   }
 }
+
+// ================= PLAYER SESSION STATE =================
+
+export async function getPlayerState(): Promise<PlayerSessionState | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const state = (await get(PLAYER_STATE_KEY, metaStore)) as PlayerSessionState | undefined;
+    return state || null;
+  } catch (e) {
+    console.error('Failed to get player session state:', e);
+    return null;
+  }
+}
+
+export async function savePlayerState(partialState: Partial<PlayerSessionState>): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = (await get(PLAYER_STATE_KEY, metaStore)) || {};
+    const updated = { ...current, ...partialState };
+    await set(PLAYER_STATE_KEY, updated, metaStore);
+  } catch (e) {
+    console.error('Failed to save player session state:', e);
+  }
+}
+
