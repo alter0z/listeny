@@ -108,3 +108,17 @@ export interface SpotifyImportResult {
   totalTracks: number;
   tracks: SpotifyImportTrack[];
 }
+
+export type RepeatMode = 'off' | 'all' | 'one';
+
+export interface PlayerSessionState {
+  currentTrack: Track | null;
+  currentTime: number;
+  queue: Track[];
+  queueIndex: number;
+  volume: number;
+  isMuted: boolean;
+  repeatMode: RepeatMode;
+  isShuffle: boolean;
+}
+

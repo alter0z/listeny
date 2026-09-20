@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import type { Track, LyricsData } from '@/types/music';
+import type { Track, LyricsData, RepeatMode, PlayerSessionState } from '@/types/music';
 import {
   addToHistory,
   getOfflineAudioUrl,
@@ -12,9 +12,11 @@ import {
   cacheLyrics,
   getFavoriteTracks,
   toggleFavoriteTrack,
+  getPlayerState,
+  savePlayerState,
 } from '@/lib/storage';
 
-export type RepeatMode = 'off' | 'all' | 'one';
+export type { RepeatMode };
 
 interface AudioPlayerContextType {
   currentTrack: Track | null;
@@ -96,6 +98,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const frequencyDataRef = useRef<Uint8Array | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
+  const pendingSeekTimeRef = useRef<number | null>(null);
+  const isHydratedRef = useRef(false);
+  const lastTimeSavedRef = useRef<number>(0);
+
   const repeatModeRef = useRef<RepeatMode>(repeatMode);
   repeatModeRef.current = repeatMode;
 
@@ -117,20 +123,44 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     audioRef.current = audio;
 
     const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+      const cur = audio.currentTime;
+      setCurrentTime(cur);
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setDuration(audio.duration);
+      }
+
+      // Throttle saving currentTime periodically
+      const now = Date.now();
+      if (isHydratedRef.current && now - lastTimeSavedRef.current >= 3000) {
+        lastTimeSavedRef.current = now;
+        savePlayerState({ currentTime: cur });
       }
     };
 
     const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPause = () => {
+      setIsPlaying(false);
+      if (isHydratedRef.current) {
+        savePlayerState({ currentTime: audio.currentTime });
+      }
+    };
     const onWaiting = () => setIsLoading(true);
     const onPlaying = () => setIsLoading(false);
     const onLoadedMetadata = () => {
       setIsLoading(false);
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setDuration(audio.duration);
+      }
+      if (pendingSeekTimeRef.current !== null && pendingSeekTimeRef.current > 0) {
+        audio.currentTime = pendingSeekTimeRef.current;
+        pendingSeekTimeRef.current = null;
+      }
+    };
+
+    const onCanPlay = () => {
+      if (pendingSeekTimeRef.current !== null && pendingSeekTimeRef.current > 0) {
+        audio.currentTime = pendingSeekTimeRef.current;
+        pendingSeekTimeRef.current = null;
       }
     };
 
@@ -161,6 +191,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     audio.addEventListener('waiting', onWaiting);
     audio.addEventListener('playing', onPlaying);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('canplay', onCanPlay);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
 
@@ -172,12 +203,135 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audio.removeEventListener('waiting', onWaiting);
       audio.removeEventListener('playing', onPlaying);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('canplay', onCanPlay);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
 
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current);
       }
+    };
+  }, []);
+
+  // Hydrate player state from IndexedDB on initial mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const savedState = await getPlayerState();
+        if (!savedState || !isMounted) {
+          isHydratedRef.current = true;
+          return;
+        }
+
+        if (typeof savedState.volume === 'number') {
+          const vol = Math.max(0, Math.min(1, savedState.volume));
+          setVolumeState(vol);
+          if (audioRef.current) audioRef.current.volume = vol;
+          if (gainNodeRef.current) gainNodeRef.current.gain.value = vol;
+        }
+
+        if (typeof savedState.isMuted === 'boolean') {
+          setIsMuted(savedState.isMuted);
+          if (audioRef.current) audioRef.current.muted = savedState.isMuted;
+          if (gainNodeRef.current) {
+            gainNodeRef.current.gain.value = savedState.isMuted ? 0 : (savedState.volume ?? 0.85);
+          }
+        }
+
+        if (savedState.repeatMode) {
+          setRepeatMode(savedState.repeatMode);
+        }
+
+        if (typeof savedState.isShuffle === 'boolean') {
+          setIsShuffle(savedState.isShuffle);
+        }
+
+        if (Array.isArray(savedState.queue)) {
+          setQueue(savedState.queue);
+        }
+
+        if (typeof savedState.queueIndex === 'number') {
+          setQueueIndex(savedState.queueIndex);
+        }
+
+        if (savedState.currentTrack) {
+          setCurrentTrack(savedState.currentTrack);
+          if (savedState.currentTrack.duration) {
+            setDuration(savedState.currentTrack.duration);
+          }
+
+          const savedTime = typeof savedState.currentTime === 'number' ? savedState.currentTime : 0;
+          setCurrentTime(savedTime);
+          pendingSeekTimeRef.current = savedTime;
+
+          const offlineUrl = await getOfflineAudioUrl(savedState.currentTrack.id);
+          if (isMounted && audioRef.current) {
+            if (offlineUrl) {
+              if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+              }
+              blobUrlRef.current = offlineUrl;
+              audioRef.current.src = offlineUrl;
+            } else {
+              audioRef.current.src = `/api/stream/${savedState.currentTrack.id}`;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to restore player session state:', err);
+      } finally {
+        if (isMounted) {
+          isHydratedRef.current = true;
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Save state whenever relevant session properties change after hydration
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    savePlayerState({
+      currentTrack,
+      queue,
+      queueIndex,
+      volume,
+      isMuted,
+      repeatMode,
+      isShuffle,
+      currentTime: audioRef.current?.currentTime ?? currentTime,
+    });
+  }, [currentTrack, queue, queueIndex, volume, isMuted, repeatMode, isShuffle]);
+
+  // Save currentTime before page unload or when tab is hidden
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleSaveOnUnload = () => {
+      if (isHydratedRef.current && audioRef.current) {
+        savePlayerState({
+          currentTime: audioRef.current.currentTime,
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleSaveOnUnload);
+    window.addEventListener('pagehide', handleSaveOnUnload);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleSaveOnUnload();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleSaveOnUnload);
+      window.removeEventListener('pagehide', handleSaveOnUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -327,6 +481,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     setCurrentTrack(track);
     setLyrics(null);
     setCurrentTime(0);
+    pendingSeekTimeRef.current = null;
 
     // Update queue if provided
     if (newQueue && newQueue.length > 0) {
@@ -373,7 +528,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     } finally {
       setIsLoading(false);
     }
-  }, [initAudioContext]);
+  }, [initAudioContext, queue]);
 
   const togglePlay = useCallback(() => {
     if (!audioRef.current || !currentTrack) return;
@@ -382,6 +537,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (isPlaying) {
       audioRef.current.pause();
     } else {
+      if (!audioRef.current.src || audioRef.current.src === '' || audioRef.current.src === window.location.href) {
+        audioRef.current.src = `/api/stream/${currentTrack.id}`;
+      }
       audioRef.current.play().catch(console.error);
     }
   }, [isPlaying, currentTrack, initAudioContext]);
@@ -395,6 +553,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const resume = useCallback(() => {
     if (audioRef.current && currentTrack) {
       initAudioContext();
+      if (!audioRef.current.src || audioRef.current.src === '' || audioRef.current.src === window.location.href) {
+        audioRef.current.src = `/api/stream/${currentTrack.id}`;
+      }
       audioRef.current.play().catch(console.error);
     }
   }, [currentTrack, initAudioContext]);
@@ -451,8 +612,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const seek = useCallback((time: number) => {
     if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, Math.min(time, duration || 0));
-      setCurrentTime(audioRef.current.currentTime);
+      const target = Math.max(0, Math.min(time, duration || 0));
+      audioRef.current.currentTime = target;
+      setCurrentTime(target);
+      pendingSeekTimeRef.current = null;
+      if (isHydratedRef.current) {
+        savePlayerState({ currentTime: target });
+      }
     }
   }, [duration]);
 
