@@ -300,7 +300,11 @@ export function PlayerBar() {
             value={isMuted ? 0 : volume}
             onChange={(e) => setVolume(Number(e.target.value))}
             className="w-20 h-1 bg-zinc-800 rounded-lg cursor-pointer accent-emerald-500"
+            title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
           />
+          <span className="text-[11px] font-mono tabular-nums text-zinc-400 w-8 text-right select-none shrink-0">
+            {Math.round((isMuted ? 0 : volume) * 100)}%
+          </span>
         </div>
 
         {/* Expand / Fullscreen */}

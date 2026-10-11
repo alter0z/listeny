@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Play,
   Shuffle,
+  Repeat,
   DownloadCloud,
   Heart,
   Plus,
@@ -33,7 +34,7 @@ export function PlaylistDetailView({
   const [cachingAll, setCachingAll] = useState(false);
   const [cacheProgress, setCacheProgress] = useState(0);
 
-  const { playTrack, addToQueue, currentTrack, isPlaying } = useAudioPlayer();
+  const { playTrack, addToQueue, currentTrack, isPlaying, repeatMode, setRepeatMode } = useAudioPlayer();
 
   const totalSeconds = playlist.tracks.reduce((acc, t) => acc + (t.duration || 0), 0);
   const totalMins = Math.floor(totalSeconds / 60);
@@ -45,6 +46,12 @@ export function PlaylistDetailView({
       list = list.sort(() => Math.random() - 0.5);
     }
     playTrack(list[0], list);
+  };
+
+  const handleLoopPlaylist = () => {
+    if (playlist.tracks.length === 0) return;
+    setRepeatMode('all');
+    playTrack(playlist.tracks[0], [...playlist.tracks]);
   };
 
   const handleCacheAll = async () => {
@@ -131,6 +138,15 @@ export function PlaylistDetailView({
               >
                 <Shuffle className="w-4 h-4" />
                 <span>Shuffle</span>
+              </button>
+
+              <button
+                onClick={handleLoopPlaylist}
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-semibold border border-white/10 transition-colors"
+                title="Play playlist on repeat"
+              >
+                <Repeat className="w-4 h-4" />
+                <span>Loop Playlist</span>
               </button>
 
               <button

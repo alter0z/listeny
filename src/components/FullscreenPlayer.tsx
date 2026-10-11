@@ -320,7 +320,11 @@ export function FullscreenPlayer() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={toggleMute} className="text-zinc-400 hover:text-white">
+            <button
+              onClick={toggleMute}
+              className="text-zinc-400 hover:text-white"
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
               {isMuted || volume === 0 ? (
                 <VolumeX className="w-5 h-5" />
               ) : volume < 0.5 ? (
@@ -337,7 +341,11 @@ export function FullscreenPlayer() {
               value={isMuted ? 0 : volume}
               onChange={(e) => setVolume(Number(e.target.value))}
               className="w-24 h-1.5 bg-zinc-800 rounded-lg cursor-pointer accent-emerald-500"
+              title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
             />
+            <span className="text-xs font-mono tabular-nums text-zinc-400 w-9 text-right select-none shrink-0">
+              {Math.round((isMuted ? 0 : volume) * 100)}%
+            </span>
           </div>
         </div>
       </div>

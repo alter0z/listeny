@@ -51,6 +51,7 @@ interface AudioPlayerContextType {
   toggleMute: () => void;
   toggleShuffle: () => void;
   cycleRepeatMode: () => void;
+  setRepeatMode: (mode: RepeatMode) => void;
   addToQueue: (tracks: Track | Track[]) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
@@ -766,6 +767,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         toggleMute,
         toggleShuffle,
         cycleRepeatMode,
+        setRepeatMode,
         addToQueue,
         removeFromQueue,
         clearQueue,
