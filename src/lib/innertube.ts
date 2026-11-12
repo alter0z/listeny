@@ -169,7 +169,7 @@ function parseSearchItem(
       });
     }
   } else if (itemType === 'album' || pageType.includes('ALBUM')) {
-    const artist = item.flex_columns?.[1]?.title?.text || item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
+    const artist = item.flex_columns?.[1]?.title?.text || item.flex_columns?.[1]?.runs?.[0]?.text || item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
     const year = item.year?.text || item.year;
     if (!albums.some(a => a.id === id)) {
       albums.push({
@@ -197,7 +197,7 @@ function parseSearchItem(
       });
     }
   } else {
-    const artist = item.flex_columns?.[1]?.title?.text || item.artists?.[0]?.name || item.author?.name || item.authors?.[0]?.name || 'Unknown Artist';
+    const artist = item.flex_columns?.[1]?.title?.text || item.flex_columns?.[1]?.runs?.[0]?.text || item.artists?.[0]?.name || item.author?.name || item.authors?.[0]?.name || 'Unknown Artist';
     const album = item.flex_columns?.[2]?.title?.text || item.album?.name;
     const duration = item.duration?.seconds || (typeof item.duration === 'number' ? item.duration : 0);
     if (!songs.some(s => s.id === id)) {
@@ -424,7 +424,7 @@ export async function getHomeFeedData(): Promise<HomeData> {
           if (!id || !title) continue;
 
           if (item.type === 'MusicResponsiveListItem' || item.duration) {
-            const artist = item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
+            const artist = item.flex_columns?.[1]?.title?.text || item.flex_columns?.[1]?.runs?.[0]?.text || item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
             const duration = item.duration?.seconds || 0;
             const track: Track = {
               id,
@@ -521,8 +521,8 @@ export async function getPlaylistDetails(playlistId: string): Promise<Playlist> 
     const trackTitle = item.title?.text || (typeof item.title === 'string' ? item.title : '') || item.name?.text || '';
     if (!id || !trackTitle) continue;
 
-    const artist = item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
-    const album = item.album?.name;
+    const artist = item.artists?.[0]?.name || item.flex_columns?.[1]?.title?.text || item.flex_columns?.[1]?.runs?.[0]?.text || item.author?.name || item.authors?.[0]?.name || 'Unknown Artist';
+    const album = item.album?.name || item.flex_columns?.[2]?.title?.text;
     const duration = item.duration?.seconds || 0;
     const trackThumb = extractBestThumbnail(item.thumbnails || item.thumbnail?.thumbnails) || thumbnail;
 
@@ -571,14 +571,16 @@ export async function getAlbumDetails(albumId: string): Promise<Album> {
     const trackTitle = (item as any).title?.text || (typeof (item as any).title === 'string' ? (item as any).title : '');
     if (!id || !trackTitle) continue;
 
+    const trackArtist = (item as any).artists?.[0]?.name || (item as any).flex_columns?.[1]?.title?.text || (item as any).flex_columns?.[1]?.runs?.[0]?.text || (item as any).author?.name || artist;
+    const trackAlbum = (item as any).album?.name || (item as any).flex_columns?.[2]?.title?.text || title;
     const duration = (item as any).duration?.seconds || 0;
 
     tracks.push({
       id,
       title: trackTitle,
-      artist,
+      artist: trackArtist,
       artistId,
-      album: title,
+      album: trackAlbum,
       albumId,
       duration,
       durationFormatted: formatDuration(duration),
