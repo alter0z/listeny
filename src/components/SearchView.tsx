@@ -25,13 +25,14 @@ import { toggleFavoriteTrack, isTrackFavorite, saveTrackOffline, isTrackCachedOf
 interface SearchViewProps {
   initialQuery?: string;
   onSelectPlaylist: (playlist: Playlist) => void;
+  onSelectArtist?: (artist: any) => void;
 }
 
 const RECENT_SEARCHES_KEY = 'listeny_recent_searches';
 
-export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewProps) {
+export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist }: SearchViewProps) {
   const [query, setQuery] = useState(initialQuery);
-  const [filter, setFilter] = useState<'all' | 'song' | 'playlist' | 'album'>('all');
+  const [filter, setFilter] = useState<'all' | 'song' | 'playlist' | 'album' | 'artist'>('all');
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -172,7 +173,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
     performSearch(suggestion, filter);
   };
 
-  const handleFilterChange = (newFilter: 'all' | 'song' | 'playlist' | 'album') => {
+  const handleFilterChange = (newFilter: 'all' | 'song' | 'playlist' | 'album' | 'artist') => {
     setFilter(newFilter);
     if (query.trim()) {
       performSearch(query, newFilter);
@@ -305,7 +306,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
 
         {/* Filter Chips */}
         <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
-          {(['all', 'song', 'playlist', 'album'] as const).map((f) => (
+          {(['all', 'song', 'playlist', 'album', 'artist'] as const).map((f) => (
             <button
               key={f}
               type="button"
@@ -452,6 +453,48 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Artists Section */}
+          {results.artists && results.artists.length > 0 && (
+            <div>
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <User className="w-4 h-4 text-emerald-400" />
+                <span>Artists</span>
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {results.artists.map((artist) => (
+                  <div
+                    key={artist.id}
+                    onClick={() => {
+                      if (onSelectArtist) onSelectArtist(artist);
+                    }}
+                    className="group bg-[#121217] hover:bg-[#181822] border border-[#1e1e28] hover:border-emerald-500/30 rounded-2xl p-3 transition-all duration-200 cursor-pointer shadow-md text-center"
+                  >
+                    <div className="relative aspect-square rounded-full overflow-hidden bg-[#181820] mb-2.5 mx-auto w-24 h-24 sm:w-28 sm:h-28 shadow-lg">
+                      {artist.thumbnail ? (
+                        <img
+                          src={artist.thumbnail}
+                          alt={artist.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <User className="w-10 h-10 text-zinc-600" />
+                        </div>
+                      )}
+                    </div>
+                    <h4 className="text-xs font-semibold text-zinc-100 truncate group-hover:text-emerald-400 transition-colors">
+                      {artist.name}
+                    </h4>
+                    <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                      {artist.subscribers || 'Artist'}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           )}

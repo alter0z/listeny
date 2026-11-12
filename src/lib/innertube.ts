@@ -91,50 +91,35 @@ export async function searchMusic(query: string, type?: 'song' | 'album' | 'arti
   const playlists: Playlist[] = [];
 
   try {
-    if (type) {
-      const results = await yt.music.search(query, { type });
-      const items = (results as any).contents?.[0]?.contents || (results as any).songs?.contents || (results as any).contents || [];
+    const results = await yt.music.search(query, type ? { type } : undefined);
 
-      for (const item of items) {
-        parseSearchItem(item, type, songs, albums, artists, playlists);
+    if ((results as any).songs?.contents) {
+      for (const item of (results as any).songs.contents) {
+        parseSearchItem(item, 'song', songs, albums, artists, playlists);
       }
-    } else {
-      // General search across categories
-      const results = await yt.music.search(query);
+    }
+    if ((results as any).albums?.contents) {
+      for (const item of (results as any).albums.contents) {
+        parseSearchItem(item, 'album', songs, albums, artists, playlists);
+      }
+    }
+    if ((results as any).artists?.contents) {
+      for (const item of (results as any).artists.contents) {
+        parseSearchItem(item, 'artist', songs, albums, artists, playlists);
+      }
+    }
+    if ((results as any).community_playlists?.contents || (results as any).playlists?.contents) {
+      const plItems = (results as any).community_playlists?.contents || (results as any).playlists?.contents || [];
+      for (const item of plItems) {
+        parseSearchItem(item, 'playlist', songs, albums, artists, playlists);
+      }
+    }
 
-      // Check songs
-      if ((results as any).songs?.contents) {
-        for (const item of (results as any).songs.contents) {
-          parseSearchItem(item, 'song', songs, albums, artists, playlists);
-        }
-      }
-      // Check albums
-      if ((results as any).albums?.contents) {
-        for (const item of (results as any).albums.contents) {
-          parseSearchItem(item, 'album', songs, albums, artists, playlists);
-        }
-      }
-      // Check artists
-      if ((results as any).artists?.contents) {
-        for (const item of (results as any).artists.contents) {
-          parseSearchItem(item, 'artist', songs, albums, artists, playlists);
-        }
-      }
-      // Check playlists
-      if ((results as any).community_playlists?.contents || (results as any).playlists?.contents) {
-        const plItems = (results as any).community_playlists?.contents || (results as any).playlists?.contents || [];
-        for (const item of plItems) {
-          parseSearchItem(item, 'playlist', songs, albums, artists, playlists);
-        }
-      }
-
-      // If categories were not split, process top result & mixed items
-      if (songs.length === 0 && (results as any).contents) {
-        for (const section of (results as any).contents) {
-          if (section.contents) {
-            for (const item of section.contents) {
-              parseSearchItem(item, undefined, songs, albums, artists, playlists);
-            }
+    if ((results as any).contents) {
+      for (const section of (results as any).contents) {
+        if (section.contents) {
+          for (const item of section.contents) {
+            parseSearchItem(item, type, songs, albums, artists, playlists);
           }
         }
       }
@@ -156,70 +141,172 @@ function parseSearchItem(
 ) {
   if (!item) return;
 
-  const itemType = explicitType || item.type || (item.id && item.duration ? 'song' : 'playlist');
-  const title = item.title?.text || (typeof item.title === 'string' ? item.title : '') || item.name?.text || item.name || '';
-  const id = item.id || item.video_id || item.playlist_id || item.browse_id || '';
-  const thumbnail = extractBestThumbnail(item.thumbnails || item.thumbnail?.thumbnails);
+  const pageType = item.endpoint?.payload?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType ||
+                   item.navigation_endpoint?.payload?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType || '';
+
+  let itemType = explicitType;
+  if (!itemType) {
+    if (pageType.includes('ARTIST') || item.type === 'Artist') itemType = 'artist';
+    else if (pageType.includes('ALBUM') || item.type === 'Album') itemType = 'album';
+    else if (pageType.includes('PLAYLIST') || item.type === 'Playlist') itemType = 'playlist';
+    else itemType = 'song';
+  }
+
+  const title = item.title?.text || item.flex_columns?.[0]?.title?.text || (typeof item.title === 'string' ? item.title : '') || item.name?.text || item.name || '';
+  const id = item.id || item.browse_id || item.video_id || item.playlist_id || item.endpoint?.payload?.browseId || item.endpoint?.payload?.videoId || '';
+  const thumbnail = extractBestThumbnail(item.thumbnails || item.thumbnail?.thumbnails || item.flex_columns?.[0]?.thumbnail?.thumbnails);
 
   if (!id || !title) return;
 
-  if (itemType === 'song' || item.type === 'MusicResponsiveListItem' || item.type === 'Song') {
-    const artist = item.artists?.[0]?.name || item.author?.name || item.authors?.[0]?.name || (typeof item.artists === 'string' ? item.artists : 'Unknown Artist');
-    const artistId = item.artists?.[0]?.id || item.author?.id;
-    const album = item.album?.name;
-    const albumId = item.album?.id;
-    const duration = item.duration?.seconds || (typeof item.duration === 'number' ? item.duration : 0);
-
-    songs.push({
-      id,
-      title,
-      artist,
-      artistId,
-      album,
-      albumId,
-      duration,
-      durationFormatted: formatDuration(duration),
-      thumbnail,
-      source: 'youtube',
-    });
-  } else if (itemType === 'album' || item.type === 'Album') {
-    const artist = item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
-    const artistId = item.artists?.[0]?.id;
+  if (itemType === 'artist' || pageType.includes('ARTIST')) {
+    const subscribers = item.flex_columns?.[1]?.title?.text || item.subscribers?.text || item.subscribers;
+    if (!artists.some(a => a.id === id)) {
+      artists.push({
+        id,
+        name: title,
+        thumbnail,
+        subscribers: subscribers ? String(subscribers) : undefined,
+      });
+    }
+  } else if (itemType === 'album' || pageType.includes('ALBUM')) {
+    const artist = item.flex_columns?.[1]?.title?.text || item.artists?.[0]?.name || item.author?.name || 'Unknown Artist';
     const year = item.year?.text || item.year;
-
-    albums.push({
-      id,
-      title,
-      artist,
-      artistId,
-      year: year ? String(year) : undefined,
-      thumbnail,
-      tracks: [],
-    });
-  } else if (itemType === 'artist' || item.type === 'Artist') {
-    const subscribers = item.subscribers?.text || item.subscribers;
-
-    artists.push({
-      id,
-      name: title,
-      thumbnail,
-      subscribers: subscribers ? String(subscribers) : undefined,
-    });
-  } else if (itemType === 'playlist' || item.type === 'Playlist') {
-    const author = item.author?.name || item.authors?.[0]?.name || 'YouTube Music';
+    if (!albums.some(a => a.id === id)) {
+      albums.push({
+        id,
+        title,
+        artist,
+        year: year ? String(year) : undefined,
+        thumbnail,
+        tracks: [],
+      });
+    }
+  } else if (itemType === 'playlist' || pageType.includes('PLAYLIST')) {
+    const author = item.flex_columns?.[1]?.title?.text || item.author?.name || item.authors?.[0]?.name || 'YouTube Music';
     const trackCount = item.item_count ? parseInt(item.item_count, 10) : undefined;
-
-    playlists.push({
-      id,
-      title,
-      description: item.description?.text || item.description,
-      thumbnail,
-      author,
-      trackCount,
-      tracks: [],
-      source: 'youtube',
-    });
+    if (!playlists.some(p => p.id === id)) {
+      playlists.push({
+        id,
+        title,
+        description: item.description?.text || item.description,
+        thumbnail,
+        author,
+        trackCount,
+        tracks: [],
+        source: 'youtube',
+      });
+    }
+  } else {
+    const artist = item.flex_columns?.[1]?.title?.text || item.artists?.[0]?.name || item.author?.name || item.authors?.[0]?.name || 'Unknown Artist';
+    const album = item.flex_columns?.[2]?.title?.text || item.album?.name;
+    const duration = item.duration?.seconds || (typeof item.duration === 'number' ? item.duration : 0);
+    if (!songs.some(s => s.id === id)) {
+      songs.push({
+        id,
+        title,
+        artist,
+        album,
+        duration,
+        durationFormatted: formatDuration(duration),
+        thumbnail,
+        source: 'youtube',
+      });
+    }
   }
+}
+
+export async function getArtistDetails(artistId: string): Promise<Artist> {
+  const yt = await getInnertube();
+  const artistInfo: any = await yt.music.getArtist(artistId);
+
+  const title = artistInfo.header?.title?.text || artistInfo.header?.name || 'Artist';
+  const thumbnail = extractBestThumbnail(artistInfo.header?.thumbnails || artistInfo.header?.thumbnail?.thumbnails);
+  const subscribers = artistInfo.header?.subscribers?.text || artistInfo.header?.subscribers;
+  const description = artistInfo.header?.description?.text || artistInfo.header?.description;
+
+  const topSongs: Track[] = [];
+  const albums: Album[] = [];
+  const singles: Album[] = [];
+
+  if (artistInfo.sections) {
+    for (const rawSec of artistInfo.sections) {
+      const section: any = rawSec;
+      if (!section) continue;
+      const sectionTitle = (section.title?.text || '').toLowerCase();
+      const items = section.contents || section.items || [];
+
+      if (sectionTitle.includes('top song') || sectionTitle.includes('songs')) {
+        for (const rawItem of items) {
+          const item: any = rawItem;
+          const sTitle = item.title?.text || item.flex_columns?.[0]?.title?.text || (typeof item.title === 'string' ? item.title : '');
+          const sId = item.id || item.video_id || item.endpoint?.payload?.videoId || '';
+          const sThumb = extractBestThumbnail(item.thumbnails || item.thumbnail?.thumbnails || item.flex_columns?.[0]?.thumbnail?.thumbnails || thumbnail);
+          if (sId && sTitle) {
+            const duration = item.duration?.seconds || (typeof item.duration === 'number' ? item.duration : 0);
+            topSongs.push({
+              id: sId,
+              title: sTitle,
+              artist: title,
+              artistId,
+              duration,
+              durationFormatted: formatDuration(duration),
+              thumbnail: sThumb,
+              source: 'youtube',
+            });
+          }
+        }
+      } else if (sectionTitle.includes('album')) {
+        for (const rawItem of items) {
+          const item: any = rawItem;
+          const aTitle = item.title?.text || item.flex_columns?.[0]?.title?.text || (typeof item.title === 'string' ? item.title : '');
+          const aId = item.id || item.browse_id || item.endpoint?.payload?.browseId || '';
+          const aThumb = extractBestThumbnail(item.thumbnails || item.thumbnail?.thumbnails || item.flex_columns?.[0]?.thumbnail?.thumbnails);
+          const year = item.year?.text || item.year;
+          if (aId && aTitle) {
+            albums.push({
+              id: aId,
+              title: aTitle,
+              artist: title,
+              artistId,
+              year: year ? String(year) : undefined,
+              thumbnail: aThumb,
+              tracks: [],
+            });
+          }
+        }
+      } else if (sectionTitle.includes('single') || sectionTitle.includes('ep')) {
+        for (const rawItem of items) {
+          const item: any = rawItem;
+          const sTitle = item.title?.text || item.flex_columns?.[0]?.title?.text || (typeof item.title === 'string' ? item.title : '');
+          const sId = item.id || item.browse_id || item.endpoint?.payload?.browseId || '';
+          const sThumb = extractBestThumbnail(item.thumbnails || item.thumbnail?.thumbnails || item.flex_columns?.[0]?.thumbnail?.thumbnails);
+          const year = item.year?.text || item.year;
+          if (sId && sTitle) {
+            singles.push({
+              id: sId,
+              title: sTitle,
+              artist: title,
+              artistId,
+              year: year ? String(year) : undefined,
+              thumbnail: sThumb,
+              tracks: [],
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    id: artistId,
+    name: title,
+    thumbnail,
+    subscribers: subscribers ? String(subscribers) : undefined,
+    description,
+    topSongs,
+    albums,
+    singles,
+  };
 }
 
 /**

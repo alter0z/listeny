@@ -10,15 +10,17 @@ import { ExploreView } from '@/components/ExploreView';
 import { SearchView } from '@/components/SearchView';
 import { LibraryView } from '@/components/LibraryView';
 import { PlaylistDetailView } from '@/components/PlaylistDetailView';
+import { ArtistDetailView } from '@/components/ArtistDetailView';
 import { QueueDrawer } from '@/components/QueueDrawer';
 import { FullscreenPlayer } from '@/components/FullscreenPlayer';
 import { ImportModal } from '@/components/ImportModal';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'explore' | 'search' | 'library' | 'downloads' | 'playlist_detail'>('explore');
+  const [currentView, setCurrentView] = useState<'explore' | 'search' | 'library' | 'downloads' | 'playlist_detail' | 'artist_detail'>('explore');
   const [searchQuery, setSearchQuery] = useState('');
   const [libraryTab, setLibraryTab] = useState<'favorites' | 'playlists' | 'downloads' | 'history'>('favorites');
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState<any | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -45,6 +47,11 @@ export default function Home() {
   const handleSelectPlaylist = (playlist: Playlist) => {
     setSelectedPlaylist(playlist);
     setCurrentView('playlist_detail');
+  };
+
+  const handleSelectArtist = (artist: any) => {
+    setSelectedArtist(artist);
+    setCurrentView('artist_detail');
   };
 
   // Handle genre click from ExploreView
@@ -92,6 +99,7 @@ export default function Home() {
             <SearchView
               initialQuery={searchQuery}
               onSelectPlaylist={handleSelectPlaylist}
+              onSelectArtist={handleSelectArtist}
             />
           )}
 
@@ -108,6 +116,14 @@ export default function Home() {
               playlist={selectedPlaylist}
               onBack={() => setCurrentView('explore')}
               onPlaylistUpdated={refreshSidebarData}
+            />
+          )}
+
+          {currentView === 'artist_detail' && selectedArtist && (
+            <ArtistDetailView
+              artistId={selectedArtist.id}
+              initialArtist={selectedArtist}
+              onBack={() => setCurrentView('search')}
             />
           )}
         </main>
