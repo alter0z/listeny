@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Play,
@@ -14,6 +14,9 @@ import {
   Loader2,
   X,
   Sparkles,
+  History,
+  Clock,
+  Trash2,
 } from 'lucide-react';
 import type { Track, Playlist, SearchResults } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
@@ -24,6 +27,8 @@ interface SearchViewProps {
   onSelectPlaylist: (playlist: Playlist) => void;
 }
 
+const RECENT_SEARCHES_KEY = 'listeny_recent_searches';
+
 export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewProps) {
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<'all' | 'song' | 'playlist' | 'album'>('all');
@@ -32,7 +37,91 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
 
+  // YouTube search suggestions & recent history state
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
   const { playTrack, addToQueue, currentTrack } = useAudioPlayer();
+
+  // Load recent searches from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (stored) {
+        setRecentSearches(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Failed to load recent searches:', e);
+    }
+  }, []);
+
+  // Save recent searches to localStorage
+  const saveRecentSearch = (searchTerm: string) => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) return;
+    try {
+      const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 10);
+      setRecentSearches(updated);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save recent search:', e);
+    }
+  };
+
+  const removeRecentSearch = (e: React.MouseEvent, item: string) => {
+    e.stopPropagation();
+    try {
+      const updated = recentSearches.filter((s) => s !== item);
+      setRecentSearches(updated);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to remove recent search:', e);
+    }
+  };
+
+  const clearRecentSearches = () => {
+    try {
+      setRecentSearches([]);
+      localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch (e) {
+      console.error('Failed to clear recent searches:', e);
+    }
+  };
+
+  // Fetch suggestions as user types with debounce
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/suggestions?q=${encodeURIComponent(query.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(data.suggestions || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch suggestions:', err);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Handle clicking outside search container to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (initialQuery) {
@@ -44,7 +133,10 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
   const performSearch = async (searchQuery: string, searchFilter: string) => {
     if (!searchQuery.trim()) return;
 
+    setIsFocused(false);
+    saveRecentSearch(searchQuery);
     setLoading(true);
+
     try {
       const typeParam = searchFilter === 'all' ? '' : `&type=${searchFilter}`;
       const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}${typeParam}`);
@@ -52,7 +144,6 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
         const data: SearchResults = await res.json();
         setResults(data);
 
-        // Check favorite and download status for returned tracks
         const favs = new Set<string>();
         const downs = new Set<string>();
         for (const track of data.tracks || []) {
@@ -72,6 +163,12 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     performSearch(query, filter);
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setQuery(suggestion);
+    setIsFocused(false);
+    performSearch(suggestion, filter);
   };
 
   const handleFilterChange = (newFilter: 'all' | 'song' | 'playlist' | 'album') => {
@@ -103,39 +200,107 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
     }
   };
 
+  const showDropdown = isFocused && (suggestions.length > 0 || (!query.trim() && recentSearches.length > 0));
+
   return (
     <div className="flex-1 overflow-y-auto pb-28 px-6 lg:px-10 py-8 select-none">
-      {/* Search Input Bar */}
-      <form onSubmit={handleSearchSubmit} className="max-w-3xl mb-8">
-        <div className="relative flex items-center">
-          <Search className="absolute left-4 w-5 h-5 text-zinc-500" />
-          <input
-            type="text"
-            placeholder="Search songs, artists, albums, or Spotify/YouTube links..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-12 pr-28 py-3.5 bg-[#121218] border border-[#232330] rounded-2xl text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm shadow-xl transition-all"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery('');
-                setResults(null);
+      {/* Search Input Bar with YouTube-like Autocomplete & History Dropdown */}
+      <div ref={searchContainerRef} className="relative max-w-3xl mb-8">
+        <form onSubmit={handleSearchSubmit}>
+          <div className="relative flex items-center">
+            <Search className="absolute left-4 w-5 h-5 text-zinc-500" />
+            <input
+              type="text"
+              placeholder="Search songs, artists, albums, or paste YouTube/Spotify links..."
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsFocused(true);
               }}
-              className="absolute right-20 p-1.5 text-zinc-500 hover:text-white"
+              onFocus={() => setIsFocused(true)}
+              className="w-full pl-12 pr-28 py-3.5 bg-[#121218] border border-[#232330] rounded-2xl text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm shadow-xl transition-all"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setSuggestions([]);
+                }}
+                className="absolute right-20 p-1.5 text-zinc-500 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="absolute right-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-semibold text-xs rounded-xl transition-all shadow-md shadow-emerald-500/20"
             >
-              <X className="w-4 h-4" />
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={loading || !query.trim()}
-            className="absolute right-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-semibold text-xs rounded-xl transition-all shadow-md shadow-emerald-500/20"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
-          </button>
-        </div>
+          </div>
+        </form>
+
+        {/* YouTube-like Autocomplete / Recent Searches Dropdown */}
+        {showDropdown && (
+          <div className="absolute left-0 right-0 mt-2 bg-[#14141d] border border-[#232332] rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl divide-y divide-white/5">
+            {/* Live Suggestions (When query is typed) */}
+            {query.trim() && suggestions.length > 0 && (
+              <div className="py-2">
+                {suggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-white/5 transition-colors group"
+                  >
+                    <Search className="w-4 h-4 text-zinc-500 group-hover:text-emerald-400 shrink-0" />
+                    <span className="truncate flex-1">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Recent Searches (When query is empty) */}
+            {!query.trim() && recentSearches.length > 0 && (
+              <div className="py-2">
+                <div className="flex items-center justify-between px-4 py-2 text-xs font-semibold text-zinc-400">
+                  <span className="flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5" /> Recent Searches
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearRecentSearches}
+                    className="text-zinc-500 hover:text-rose-400 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                {recentSearches.map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => handleSelectSuggestion(item)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-white/5 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Clock className="w-4 h-4 text-zinc-500 shrink-0" />
+                      <span className="truncate">{item}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => removeRecentSearch(e, item)}
+                      className="p-1 text-zinc-500 hover:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Filter Chips */}
         <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
@@ -154,7 +319,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
             </button>
           ))}
         </div>
-      </form>
+      </div>
 
       {/* Loading Indicator */}
       {loading && (
