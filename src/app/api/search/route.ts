@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const results = await searchMusic(query.trim(), type || undefined);
-    return NextResponse.json(results);
+    return NextResponse.json({
+      ...results,
+      tracks: results.songs,
+    });
   } catch (error: unknown) {
     console.error('Search API error:', error);
     return NextResponse.json(

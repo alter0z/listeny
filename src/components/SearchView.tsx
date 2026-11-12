@@ -144,9 +144,10 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
         const data: SearchResults = await res.json();
         setResults(data);
 
+        const tracksList = data.tracks || data.songs || [];
         const favs = new Set<string>();
         const downs = new Set<string>();
-        for (const track of data.tracks || []) {
+        for (const track of tracksList) {
           if (await isTrackFavorite(track.id)) favs.add(track.id);
           if (await isTrackCachedOffline(track.id)) downs.add(track.id);
         }
@@ -346,7 +347,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
       {!loading && results && (
         <div className="space-y-10">
           {/* Tracks Section */}
-          {results.tracks && results.tracks.length > 0 && (
+          {((results.tracks && results.tracks.length > 0) || (results.songs && results.songs.length > 0)) && (
             <div>
               <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
                 <Music className="w-4 h-4 text-emerald-400" />
@@ -354,7 +355,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
               </h3>
 
               <div className="space-y-1">
-                {results.tracks.map((track, idx) => {
+                {(results.tracks || results.songs || []).map((track, idx) => {
                   const isCurrent = currentTrack?.id === track.id;
                   const isFav = favoriteIds.has(track.id);
                   const isDown = downloadedIds.has(track.id);
@@ -368,7 +369,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist }: SearchViewPr
                     >
                       {/* Left: Play button & info */}
                       <div
-                        onClick={() => playTrack(track, results.tracks)}
+                        onClick={() => playTrack(track, results.tracks || results.songs)}
                         className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
                       >
                         <span className="w-6 text-center text-xs text-zinc-500 font-mono">
