@@ -11,10 +11,46 @@ const HISTORY_KEY = 'listeny_play_history';
 const OFFLINE_INDEX_KEY = 'listeny_offline_tracks_index';
 const PLAYER_STATE_KEY = 'listeny_player_session_state';
 
-// ================= PLAYLISTS =================
+// ================= AUTH / USER PROFILE =================
+
+const CURRENT_USER_KEY = 'listeny_current_user';
+
+export function getCurrentUser(): string {
+  if (typeof window === 'undefined') return 'default';
+  try {
+    return localStorage.getItem(CURRENT_USER_KEY) || 'default';
+  } catch {
+    return 'default';
+  }
+}
+
+export function setCurrentUser(username: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CURRENT_USER_KEY, username.trim().toLowerCase());
+  } catch (e) {
+    console.error('Failed to set current user:', e);
+  }
+}
+
+// ================= PLAYLISTS (Server DB + Client IndexedDB Sync) =================
 
 export async function getSavedPlaylists(): Promise<Playlist[]> {
   if (typeof window === 'undefined') return [];
+  const userId = getCurrentUser();
+  try {
+    const res = await fetch(`/api/playlists?userId=${encodeURIComponent(userId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.playlists) {
+        await set(PLAYLISTS_KEY, data.playlists, metaStore);
+        return data.playlists;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to fetch playlists from server, falling back to local DB:', err);
+  }
+
   try {
     const playlists = (await get(PLAYLISTS_KEY, metaStore)) || [];
     return playlists;
@@ -26,6 +62,25 @@ export async function getSavedPlaylists(): Promise<Playlist[]> {
 
 export async function savePlaylist(playlist: Playlist): Promise<Playlist[]> {
   if (typeof window === 'undefined') return [];
+  const userId = getCurrentUser();
+
+  try {
+    const res = await fetch('/api/playlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, playlist }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.playlists) {
+        await set(PLAYLISTS_KEY, data.playlists, metaStore);
+        return data.playlists;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to save playlist to server, saving locally:', err);
+  }
+
   try {
     const current = await getSavedPlaylists();
     const existingIndex = current.findIndex((p) => p.id === playlist.id);
@@ -41,20 +96,37 @@ export async function savePlaylist(playlist: Playlist): Promise<Playlist[]> {
     await set(PLAYLISTS_KEY, updated, metaStore);
     return updated;
   } catch (e) {
-    console.error('Failed to save playlist:', e);
+    console.error('Failed to save playlist locally:', e);
     return [];
   }
 }
 
 export async function deletePlaylist(playlistId: string): Promise<Playlist[]> {
   if (typeof window === 'undefined') return [];
+  const userId = getCurrentUser();
+
+  try {
+    const res = await fetch(`/api/playlists?userId=${encodeURIComponent(userId)}&playlistId=${encodeURIComponent(playlistId)}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.playlists) {
+        await set(PLAYLISTS_KEY, data.playlists, metaStore);
+        return data.playlists;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to delete playlist from server, deleting locally:', err);
+  }
+
   try {
     const current = await getSavedPlaylists();
     const updated = current.filter((p) => p.id !== playlistId);
     await set(PLAYLISTS_KEY, updated, metaStore);
     return updated;
   } catch (e) {
-    console.error('Failed to delete playlist:', e);
+    console.error('Failed to delete playlist locally:', e);
     return [];
   }
 }

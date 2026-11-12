@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { Playlist } from '@/types/music';
+import { getCurrentUser, setCurrentUser } from '@/lib/storage';
 
 interface SidebarProps {
   currentView: string;
@@ -32,6 +33,21 @@ export function Sidebar({
   onOpenImport,
   offlineCount,
 }: SidebarProps) {
+  const [currentUser, setCurrentUserStr] = React.useState('default');
+
+  React.useEffect(() => {
+    setCurrentUserStr(getCurrentUser());
+  }, []);
+
+  const handleSwitchUser = () => {
+    const input = prompt('Enter your username / account name:', currentUser);
+    if (input && input.trim()) {
+      const clean = input.trim().toLowerCase();
+      setCurrentUser(clean);
+      setCurrentUserStr(clean);
+      window.location.reload();
+    }
+  };
   return (
     <aside className="w-64 bg-[#0a0a0d] border-r border-[#1e1e24] flex flex-col h-full shrink-0 select-none">
       {/* Brand Header */}
@@ -166,6 +182,28 @@ export function Sidebar({
             </button>
           ))
         )}
+      </div>
+
+      {/* User Profile / Auth Footer */}
+      <div className="p-3 border-t border-[#18181f] bg-[#07070a] flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs uppercase shrink-0">
+            {currentUser.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-zinc-200 truncate capitalize">
+              {currentUser}
+            </p>
+            <p className="text-[10px] text-zinc-500 truncate">Database Synced</p>
+          </div>
+        </div>
+        <button
+          onClick={handleSwitchUser}
+          className="px-2.5 py-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors text-xs font-semibold"
+          title="Switch User / Account"
+        >
+          Switch
+        </button>
       </div>
     </aside>
   );
