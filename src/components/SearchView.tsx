@@ -21,6 +21,7 @@ import {
 import type { Track, Playlist, SearchResults } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { toggleFavoriteTrack, isTrackFavorite, saveTrackOffline, isTrackCachedOffline } from '@/lib/storage';
+import { PlaylistCover } from '@/components/PlaylistCover';
 
 interface SearchViewProps {
   initialQuery?: string;
@@ -516,17 +517,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
                     className="group bg-[#121217] hover:bg-[#181822] border border-[#1e1e28] hover:border-emerald-500/30 rounded-2xl p-3 transition-all duration-200 cursor-pointer shadow-md"
                   >
                     <div className="relative aspect-square rounded-xl overflow-hidden bg-[#181820] mb-2.5">
-                      {item.thumbnail ? (
-                        <img
-                          src={item.thumbnail}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Disc3 className="w-10 h-10 text-zinc-600" />
-                        </div>
-                      )}
+                      <PlaylistCover playlist={item} className="w-full h-full rounded-xl overflow-hidden group-hover:scale-105 transition-transform duration-300" iconClassName="w-10 h-10 text-zinc-600" />
                     </div>
                     <h4 className="text-xs font-semibold text-zinc-100 truncate group-hover:text-emerald-400 transition-colors">
                       {item.title}

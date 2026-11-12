@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Playlist } from '@/types/music';
 import { getCurrentUser, setCurrentUser } from '@/lib/storage';
+import { PlaylistCover } from '@/components/PlaylistCover';
 
 interface SidebarProps {
   currentView: string;
@@ -164,13 +165,7 @@ export function Sidebar({
               onClick={() => onSelectPlaylist(pl)}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm text-zinc-400 hover:text-zinc-100 hover:bg-[#15151c] group transition-colors"
             >
-              <div className="w-8 h-8 rounded-md bg-[#1e1e26] flex items-center justify-center shrink-0 overflow-hidden">
-                {pl.thumbnail ? (
-                  <img src={pl.thumbnail} alt={pl.title} className="w-full h-full object-cover" />
-                ) : (
-                  <Disc3 className="w-4 h-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
-                )}
-              </div>
+              <PlaylistCover playlist={pl} className="w-8 h-8 rounded-md shrink-0 overflow-hidden" iconClassName="w-4 h-4 text-zinc-500 group-hover:text-emerald-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-medium text-zinc-300 group-hover:text-white">
                   {pl.title}

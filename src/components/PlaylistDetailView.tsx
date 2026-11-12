@@ -19,6 +19,7 @@ import {
 import type { Playlist, Track } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { saveTrackOffline, toggleFavoriteTrack, savePlaylist, deletePlaylist } from '@/lib/storage';
+import { PlaylistCover } from '@/components/PlaylistCover';
 
 interface PlaylistDetailViewProps {
   playlist: Playlist;
@@ -90,17 +91,7 @@ export function PlaylistDetailView({
 
         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 lg:gap-8">
           <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl bg-[#181824] shadow-2xl shadow-black/80 overflow-hidden shrink-0 border border-white/10">
-            {playlist.thumbnail ? (
-              <img
-                src={playlist.thumbnail}
-                alt={playlist.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Disc3 className="w-16 h-16 text-zinc-600" />
-              </div>
-            )}
+            <PlaylistCover playlist={playlist} className="w-full h-full" iconClassName="w-16 h-16 text-zinc-600" />
           </div>
 
           <div className="flex-1 text-center sm:text-left">

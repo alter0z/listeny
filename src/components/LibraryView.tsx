@@ -23,6 +23,7 @@ import {
   removeTrackOffline,
   toggleFavoriteTrack,
 } from '@/lib/storage';
+import { PlaylistCover } from '@/components/PlaylistCover';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 
 interface LibraryViewProps {
@@ -277,17 +278,7 @@ export function LibraryView({
                   className="group bg-[#121217] hover:bg-[#181822] border border-[#1e1e28] hover:border-emerald-500/30 rounded-2xl p-3.5 transition-all duration-200 cursor-pointer shadow-md relative"
                 >
                   <div className="relative aspect-square rounded-xl overflow-hidden bg-[#181820] mb-3">
-                    {pl.thumbnail ? (
-                      <img
-                        src={pl.thumbnail}
-                        alt={pl.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Disc3 className="w-10 h-10 text-zinc-600" />
-                      </div>
-                    )}
+                    <PlaylistCover playlist={pl} className="w-full h-full rounded-xl overflow-hidden group-hover:scale-105 transition-transform duration-300" iconClassName="w-10 h-10 text-zinc-600" />
                     <button
                       onClick={(e) => handleDeletePlaylist(pl.id, e)}
                       className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-rose-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md"
