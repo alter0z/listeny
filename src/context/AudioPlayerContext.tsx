@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { Track, LyricsData, RepeatMode, PlayerSessionState } from '@/types/music';
+import { AddToPlaylistModal } from '@/components/AddToPlaylistModal';
 import {
   addToHistory,
   getOfflineAudioUrl,
@@ -38,6 +39,8 @@ interface AudioPlayerContextType {
   isQueueOpen: boolean;
   isLyricsOpen: boolean;
   isVisualizerActive: boolean;
+  addToPlaylistTrack: Track | null;
+  setAddToPlaylistTrack: (track: Track | null) => void;
 
   // Actions
   playTrack: (track: Track, newQueue?: Track[]) => Promise<void>;
@@ -89,6 +92,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [isVisualizerActive, setIsVisualizerActive] = useState(false);
+  const [addToPlaylistTrack, setAddToPlaylistTrack] = useState<Track | null>(null);
 
   // Audio and Web Audio API refs
   const audioRef = useRef<HTMLMediaElement | null>(null);
@@ -778,10 +782,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setIsQueueOpen,
         setIsLyricsOpen,
         setIsVisualizerActive,
+        addToPlaylistTrack,
+        setAddToPlaylistTrack,
         getFrequencyData,
       }}
     >
       {children}
+      <AddToPlaylistModal track={addToPlaylistTrack} onClose={() => setAddToPlaylistTrack(null)} />
     </AudioPlayerContext.Provider>
   );
 }

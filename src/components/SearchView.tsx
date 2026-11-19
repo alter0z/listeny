@@ -45,7 +45,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
   const [isFocused, setIsFocused] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const { playTrack, addToQueue, currentTrack } = useAudioPlayer();
+  const { playTrack, addToQueue, currentTrack, setAddToPlaylistTrack } = useAudioPlayer();
 
   // Load recent searches from localStorage on mount
   useEffect(() => {
@@ -426,6 +426,17 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
                           title={isFav ? 'Remove favorite' : 'Add to favorites'}
                         >
                           <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500' : ''}`} />
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddToPlaylistTrack(track);
+                          }}
+                          className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                          title="Add to playlist"
+                        >
+                          <Disc3 className="w-4 h-4" />
                         </button>
 
                         <button

@@ -131,6 +131,33 @@ export async function deletePlaylist(playlistId: string): Promise<Playlist[]> {
   }
 }
 
+export async function addTrackToPlaylist(playlistId: string, track: Track): Promise<Playlist[]> {
+  if (typeof window === 'undefined') return [];
+  const playlists = await getSavedPlaylists();
+  const playlist = playlists.find((p) => p.id === playlistId);
+  if (!playlist) return playlists;
+
+  if (!playlist.tracks.some((t) => t.id === track.id)) {
+    playlist.tracks.push(track);
+    playlist.trackCount = playlist.tracks.length;
+    return await savePlaylist(playlist);
+  }
+  return playlists;
+}
+
+export async function createPlaylist(title: string, description?: string): Promise<Playlist[]> {
+  if (typeof window === 'undefined') return [];
+  const newPl: Playlist = {
+    id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    title: title.trim() || 'My Playlist',
+    description: description || 'Created in Listeny',
+    tracks: [],
+    source: 'custom',
+    author: getCurrentUser(),
+  };
+  return await savePlaylist(newPl);
+}
+
 // ================= FAVORITES =================
 
 export async function getFavoriteTracks(): Promise<Track[]> {

@@ -45,7 +45,7 @@ export function LibraryView({
   const [downloads, setDownloads] = useState<Track[]>([]);
   const [history, setHistory] = useState<Track[]>([]);
 
-  const { playTrack, currentTrack, addToQueue } = useAudioPlayer();
+  const { playTrack, currentTrack, addToQueue, setAddToPlaylistTrack } = useAudioPlayer();
 
   const loadData = async () => {
     const [favs, pls, downs, hist] = await Promise.all([
@@ -226,6 +226,16 @@ export function LibraryView({
                         <span className="text-xs font-mono text-zinc-500 mr-2">
                           {track.durationFormatted || '3:30'}
                         </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddToPlaylistTrack(track);
+                          }}
+                          className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                          title="Add to playlist"
+                        >
+                          <Disc3 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={(e) => handleRemoveFavorite(track, e)}
                           className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors"

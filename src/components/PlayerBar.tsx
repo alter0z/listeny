@@ -20,6 +20,7 @@ import {
   Activity,
   ArrowDownToLine,
   Loader2,
+  Disc3,
 } from 'lucide-react';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
@@ -61,6 +62,7 @@ export function PlayerBar() {
     setIsQueueOpen,
     setIsLyricsOpen,
     setIsVisualizerActive,
+    setAddToPlaylistTrack,
   } = useAudioPlayer();
 
   if (!currentTrack) {
@@ -132,6 +134,14 @@ export function PlayerBar() {
             title={isDownloaded ? 'Cached Offline (Click to remove)' : 'Save Offline to Browser'}
           >
             <DownloadCloud className={`w-4 h-4 ${isDownloaded ? 'stroke-[2.5]' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => setAddToPlaylistTrack(currentTrack)}
+            className="p-2 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-[#181822] transition-colors"
+            title="Add to Playlist"
+          >
+            <Disc3 className="w-4 h-4" />
           </button>
         </div>
       </div>

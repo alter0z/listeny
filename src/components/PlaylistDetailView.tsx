@@ -35,7 +35,7 @@ export function PlaylistDetailView({
   const [cachingAll, setCachingAll] = useState(false);
   const [cacheProgress, setCacheProgress] = useState(0);
 
-  const { playTrack, addToQueue, currentTrack, isPlaying, repeatMode, setRepeatMode } = useAudioPlayer();
+  const { playTrack, addToQueue, currentTrack, isPlaying, repeatMode, setRepeatMode, setAddToPlaylistTrack } = useAudioPlayer();
 
   const totalSeconds = playlist.tracks.reduce((acc, t) => acc + (t.duration || 0), 0);
   const totalMins = Math.floor(totalSeconds / 60);
@@ -228,6 +228,17 @@ export function PlaylistDetailView({
                       title="Add to queue"
                     >
                       <Plus className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAddToPlaylistTrack(track);
+                      }}
+                      className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                      title="Add to playlist"
+                    >
+                      <Disc3 className="w-4 h-4" />
                     </button>
 
                     <button
