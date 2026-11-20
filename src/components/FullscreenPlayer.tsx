@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
+import { getApiUrl } from '@/lib/api';
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -186,9 +187,11 @@ export function FullscreenPlayer() {
             </button>
 
             <a
-              href={`/api/download/${currentTrack.id}?title=${encodeURIComponent(
-                currentTrack.title
-              )}&artist=${encodeURIComponent(currentTrack.artist)}`}
+              href={getApiUrl(
+                `/api/download/${currentTrack.id}?title=${encodeURIComponent(
+                  currentTrack.title
+                )}&artist=${encodeURIComponent(currentTrack.artist)}`
+              )}
               download={`${currentTrack.artist} - ${currentTrack.title}.mp3`}
               className="p-3 rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
               title="Download File to Computer"

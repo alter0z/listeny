@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { Track, LyricsData, RepeatMode, PlayerSessionState } from '@/types/music';
 import { AddToPlaylistModal } from '@/components/AddToPlaylistModal';
+import { getApiUrl } from '@/lib/api';
 import {
   addToHistory,
   getOfflineAudioUrl,
@@ -279,7 +280,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
               blobUrlRef.current = offlineUrl;
               audioRef.current.src = offlineUrl;
             } else {
-              audioRef.current.src = `/api/stream/${savedState.currentTrack.id}`;
+              audioRef.current.src = getApiUrl(`/api/stream/${savedState.currentTrack.id}`);
             }
           }
         }
@@ -459,7 +460,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           artist: currentTrack.artist,
           duration: String(currentTrack.duration || 0),
         });
-        const res = await fetch(`/api/lyrics/${currentTrack.id}?${queryParams.toString()}`);
+        const res = await fetch(getApiUrl(`/api/lyrics/${currentTrack.id}?${queryParams.toString()}`));
         if (res.ok) {
           const data: LyricsData = await res.json();
           if (isMounted) {
@@ -508,7 +509,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     // Check offline cache first
-    let audioSrc = `/api/stream/${track.id}`;
+    let audioSrc = getApiUrl(`/api/stream/${track.id}`);
     const offlineUrl = await getOfflineAudioUrl(track.id);
 
     if (offlineUrl) {
@@ -543,7 +544,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audioRef.current.pause();
     } else {
       if (!audioRef.current.src || audioRef.current.src === '' || audioRef.current.src === window.location.href) {
-        audioRef.current.src = `/api/stream/${currentTrack.id}`;
+        audioRef.current.src = getApiUrl(`/api/stream/${currentTrack.id}`);
       }
       audioRef.current.play().catch(console.error);
     }
@@ -559,7 +560,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (audioRef.current && currentTrack) {
       initAudioContext();
       if (!audioRef.current.src || audioRef.current.src === '' || audioRef.current.src === window.location.href) {
-        audioRef.current.src = `/api/stream/${currentTrack.id}`;
+        audioRef.current.src = getApiUrl(`/api/stream/${currentTrack.id}`);
       }
       audioRef.current.play().catch(console.error);
     }
@@ -725,7 +726,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     } else {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/stream/${currentTrack.id}`);
+        const res = await fetch(getApiUrl(`/api/stream/${currentTrack.id}`));
         if (!res.ok) throw new Error('Stream fetch failed');
         const blob = await res.blob();
         await saveTrackOffline(currentTrack, blob);

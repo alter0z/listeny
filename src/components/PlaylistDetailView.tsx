@@ -20,6 +20,7 @@ import type { Playlist, Track } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { saveTrackOffline, toggleFavoriteTrack, savePlaylist, deletePlaylist } from '@/lib/storage';
 import { PlaylistCover } from '@/components/PlaylistCover';
+import { getApiUrl } from '@/lib/api';
 
 interface PlaylistDetailViewProps {
   playlist: Playlist;
@@ -63,7 +64,7 @@ export function PlaylistDetailView({
     for (let i = 0; i < playlist.tracks.length; i++) {
       const track = playlist.tracks[i];
       try {
-        const res = await fetch(`/api/stream/${track.id}`);
+        const res = await fetch(getApiUrl(`/api/stream/${track.id}`));
         if (res.ok) {
           const blob = await res.blob();
           await saveTrackOffline(track, blob);
@@ -250,9 +251,11 @@ export function PlaylistDetailView({
                     </button>
 
                     <a
-                      href={`/api/download/${track.id}?title=${encodeURIComponent(
-                        track.title
-                      )}&artist=${encodeURIComponent(track.artist)}`}
+                      href={getApiUrl(
+                        `/api/download/${track.id}?title=${encodeURIComponent(
+                          track.title
+                        )}&artist=${encodeURIComponent(track.artist)}`
+                      )}
                       download={`${track.artist} - ${track.title}.mp3`}
                       className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-white/5 rounded-xl transition-colors"
                       title="Download MP3"

@@ -1,5 +1,6 @@
 import { get, set, del, keys, createStore } from 'idb-keyval';
 import type { Track, Playlist, LyricsData, PlayerSessionState } from '@/types/music';
+import { getApiUrl } from './api';
 
 // IndexedDB stores
 const audioStore = typeof window !== 'undefined' ? createStore('listeny_audio_db', 'audio_blobs') : undefined;
@@ -39,7 +40,7 @@ export async function getSavedPlaylists(): Promise<Playlist[]> {
   if (typeof window === 'undefined') return [];
   const userId = getCurrentUser();
   try {
-    const res = await fetch(`/api/playlists?userId=${encodeURIComponent(userId)}`);
+    const res = await fetch(getApiUrl(`/api/playlists?userId=${encodeURIComponent(userId)}`));
     if (res.ok) {
       const data = await res.json();
       if (data.playlists) {
@@ -65,7 +66,7 @@ export async function savePlaylist(playlist: Playlist): Promise<Playlist[]> {
   const userId = getCurrentUser();
 
   try {
-    const res = await fetch('/api/playlists', {
+    const res = await fetch(getApiUrl('/api/playlists'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, playlist }),
@@ -106,7 +107,7 @@ export async function deletePlaylist(playlistId: string): Promise<Playlist[]> {
   const userId = getCurrentUser();
 
   try {
-    const res = await fetch(`/api/playlists?userId=${encodeURIComponent(userId)}&playlistId=${encodeURIComponent(playlistId)}`, {
+    const res = await fetch(getApiUrl(`/api/playlists?userId=${encodeURIComponent(userId)}&playlistId=${encodeURIComponent(playlistId)}`), {
       method: 'DELETE',
     });
     if (res.ok) {

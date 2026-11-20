@@ -25,6 +25,7 @@ import {
 } from '@/lib/storage';
 import { PlaylistCover } from '@/components/PlaylistCover';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
+import { getApiUrl } from '@/lib/api';
 
 interface LibraryViewProps {
   initialTab?: 'favorites' | 'playlists' | 'downloads' | 'history';
@@ -244,9 +245,11 @@ export function LibraryView({
                           <Heart className="w-4 h-4 fill-rose-500" />
                         </button>
                         <a
-                          href={`/api/download/${track.id}?title=${encodeURIComponent(
-                            track.title
-                          )}&artist=${encodeURIComponent(track.artist)}`}
+                          href={getApiUrl(
+                            `/api/download/${track.id}?title=${encodeURIComponent(
+                              track.title
+                            )}&artist=${encodeURIComponent(track.artist)}`
+                          )}
                           download={`${track.artist} - ${track.title}.mp3`}
                           className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-white/5 rounded-xl transition-colors"
                         >

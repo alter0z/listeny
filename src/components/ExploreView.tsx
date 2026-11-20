@@ -17,6 +17,7 @@ import {
 import type { Track, Playlist, HomeSection } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { PlaylistCover } from '@/components/PlaylistCover';
+import { getApiUrl } from '@/lib/api';
 
 interface ExploreViewProps {
   onSelectPlaylist: (playlist: Playlist) => void;
@@ -50,7 +51,7 @@ export function ExploreView({
     let isMounted = true;
     (async () => {
       try {
-        const res = await fetch('/api/explore');
+        const res = await fetch(getApiUrl('/api/explore'));
         if (res.ok) {
           const json = await res.json();
           if (isMounted) {

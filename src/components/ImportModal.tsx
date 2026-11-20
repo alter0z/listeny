@@ -17,6 +17,7 @@ import type { Playlist } from '@/types/music';
 import { savePlaylist } from '@/lib/storage';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { parseImportFile } from '@/lib/fileImport';
+import { getApiUrl } from '@/lib/api';
 
 type ImportTab = 'spotify' | 'youtube' | 'file';
 
@@ -69,9 +70,9 @@ export function ImportModal({ isOpen, onClose, onPlaylistSaved }: ImportModalPro
     setImportedPlaylist(null);
 
     try {
-      let endpoint = '/api/import/spotify';
+      let endpoint = getApiUrl('/api/import/spotify');
       if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        endpoint = '/api/import/youtube';
+        endpoint = getApiUrl('/api/import/youtube');
         setStatusMessage('Fetching YouTube Music playlist tracks...');
       } else {
         setStatusMessage('Extracting Spotify metadata and matching with YouTube Music streams (Hybrid Engine)...');
@@ -150,7 +151,7 @@ export function ImportModal({ isOpen, onClose, onPlaylistSaved }: ImportModalPro
         setEnriching(true);
         setEnrichTotal(missingIds.length);
         try {
-          const res = await fetch('/api/import/file', {
+          const res = await fetch(getApiUrl('/api/import/file'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ videoIds: missingIds }),

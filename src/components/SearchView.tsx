@@ -22,6 +22,7 @@ import type { Track, Playlist, SearchResults } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { toggleFavoriteTrack, isTrackFavorite, saveTrackOffline, isTrackCachedOffline } from '@/lib/storage';
 import { PlaylistCover } from '@/components/PlaylistCover';
+import { getApiUrl } from '@/lib/api';
 
 interface SearchViewProps {
   initialQuery?: string;
@@ -101,7 +102,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/suggestions?q=${encodeURIComponent(query.trim())}`);
+        const res = await fetch(getApiUrl(`/api/suggestions?q=${encodeURIComponent(query.trim())}`));
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data.suggestions || []);
@@ -141,7 +142,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
 
     try {
       const typeParam = searchFilter === 'all' ? '' : `&type=${searchFilter}`;
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}${typeParam}`);
+      const res = await fetch(getApiUrl(`/api/search?q=${encodeURIComponent(searchQuery.trim())}${typeParam}`));
       if (res.ok) {
         const data: SearchResults = await res.json();
         setResults(data);
@@ -193,7 +194,7 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
 
   const handleDownload = async (track: Track) => {
     try {
-      const res = await fetch(`/api/stream/${track.id}`);
+      const res = await fetch(getApiUrl(`/api/stream/${track.id}`));
       if (!res.ok) throw new Error('Stream fetch failed');
       const blob = await res.blob();
       await saveTrackOffline(track, blob);
@@ -452,9 +453,11 @@ export function SearchView({ initialQuery = '', onSelectPlaylist, onSelectArtist
                         </button>
 
                         <a
-                          href={`/api/download/${track.id}?title=${encodeURIComponent(
-                            track.title
-                          )}&artist=${encodeURIComponent(track.artist)}`}
+                          href={getApiUrl(
+                            `/api/download/${track.id}?title=${encodeURIComponent(
+                              track.title
+                            )}&artist=${encodeURIComponent(track.artist)}`
+                          )}
                           download={`${track.artist} - ${track.title}.mp3`}
                           className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-white/5 rounded-xl transition-colors"
                           title="Download MP3 file directly to computer"

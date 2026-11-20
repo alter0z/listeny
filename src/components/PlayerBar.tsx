@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
+import { getApiUrl } from '@/lib/api';
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -277,9 +278,11 @@ export function PlayerBar() {
 
         {/* Direct MP3 Download to Disk */}
         <a
-          href={`/api/download/${currentTrack.id}?title=${encodeURIComponent(
-            currentTrack.title
-          )}&artist=${encodeURIComponent(currentTrack.artist)}`}
+          href={getApiUrl(
+            `/api/download/${currentTrack.id}?title=${encodeURIComponent(
+              currentTrack.title
+            )}&artist=${encodeURIComponent(currentTrack.artist)}`
+          )}
           download={`${currentTrack.artist} - ${currentTrack.title}.mp3`}
           className="p-2 text-zinc-400 hover:text-emerald-400 hover:bg-[#161620] rounded-lg transition-colors"
           title="Download Audio File to PC"

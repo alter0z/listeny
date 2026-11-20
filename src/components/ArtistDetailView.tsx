@@ -16,6 +16,7 @@ import {
 import type { Artist, Track, Album } from '@/types/music';
 import { useAudioPlayer } from '@/context/AudioPlayerContext';
 import { saveTrackOffline, toggleFavoriteTrack, isTrackFavorite, isTrackCachedOffline } from '@/lib/storage';
+import { getApiUrl } from '@/lib/api';
 
 interface ArtistDetailViewProps {
   artistId: string;
@@ -44,7 +45,7 @@ export function ArtistDetailView({
       if (!artistId) return;
       setLoading(true);
       try {
-        const res = await fetch(`/api/artist/${artistId}`);
+        const res = await fetch(getApiUrl(`/api/artist/${artistId}`));
         if (!res.ok) throw new Error('Failed to fetch artist details');
         const data = await res.json();
         if (isMounted) {
@@ -110,7 +111,7 @@ export function ArtistDetailView({
 
   const handleDownloadTrack = async (track: Track) => {
     try {
-      const res = await fetch(`/api/stream/${track.id}`);
+      const res = await fetch(getApiUrl(`/api/stream/${track.id}`));
       if (res.ok) {
         const blob = await res.blob();
         await saveTrackOffline(track, blob);
@@ -302,9 +303,11 @@ export function ArtistDetailView({
                         </button>
 
                         <a
-                          href={`/api/download/${track.id}?title=${encodeURIComponent(
-                            track.title
-                          )}&artist=${encodeURIComponent(track.artist)}`}
+                          href={getApiUrl(
+                            `/api/download/${track.id}?title=${encodeURIComponent(
+                              track.title
+                            )}&artist=${encodeURIComponent(track.artist)}`
+                          )}
                           download={`${track.artist} - ${track.title}.mp3`}
                           className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-white/5 rounded-xl transition-colors"
                           title="Download MP3"
